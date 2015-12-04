@@ -1,7 +1,5 @@
 # DockerMake
-Dependency-based builds for Docker containers.
-
-A small pyton utility that uses human-readable YAML files to compose docker containers.
+Compose docker containers using human-readable YAML files.
 
 Sample DockerMake.yaml:
 ```yaml
