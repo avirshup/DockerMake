@@ -1,28 +1,32 @@
+data_image:
+ FROM: phusion/baseimage
+ build: RUN mkdir /data
+
 devbase:
  FROM: phusion/baseimage
- command: |
+ build: |
   RUN apt-get -y update && apt-get -y install \
       build-essential \
-   && mkdir /opt
+   && mkdir -p /opt
 
 airline_data:
  requires:
-  - devbase
+  - data_image
  build_directory: sample_data/airline_data
- command: |
-  ADD AirlinePassengers.csv
+ build: |
+  ADD AirlinePassengers.csv /data
 
 plant_data:
  requires:
- - devbase
+ - data_image
  build_directory: sample_data/plant_growth
- command: |
-  ADD Puromycin.csv
+ build: |
+  ADD Puromycin.csv /data
 
 python_image:
  requires:
   - devbase
- command: |
+ build: |
   RUN apt-get -y update \
   && apt-get install -y \
     python \
