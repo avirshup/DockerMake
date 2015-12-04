@@ -2,10 +2,11 @@
 """
 Multiple inheritance for your dockerfiles.
 Requires: python 2.7, docker-py, pyyaml (RUN: easy_install pip; pip install docker-py pyyaml)
-Copyright (c) 2015, Aaron Virshup - released under the simplified BSD license (see __license__)
+
+Copyright (c) 2015, Aaron Virshup. See LICENSE
 """
 from collections import OrderedDict
-from StringIO import StringIO
+from io import StringIO
 import argparse
 
 import docker,docker.utils
@@ -21,9 +22,12 @@ class BuildStep(object):
 class DockerMaker(object):
     def __init__(self, makefile, user=None,
                  build_images=True,
-                 print_dockerfiles=False):
+                 print_dockerfiles=False,
+                 pull=False):
         if build_images:
-            self.client = docker.Client(**docker.utils.kwargs_from_env())
+            connection = docker.utils.kwargs_from_env()
+            connection['tls'].assert_hostname = False
+            self.client = docker.Client(**connection)
         else:
             self.client = None
 
@@ -36,6 +40,7 @@ class DockerMaker(object):
             self.user = ''
         self.build_images = build_images
         self.print_dockerfiles = print_dockerfiles
+        self.pull = pull
 
     def build(self, image):
         """
@@ -43,13 +48,23 @@ class DockerMaker(object):
         :param image: name of the image from the yaml file to build
         :return: final tagged image name
         """
+        print 'Starting build for %s'%image
         build_steps = self.generate_build_order(image)
         for step in build_steps:
             if self.build_images:
-                stream = self.client.build(path=step.build_directory,
-                                           dockerfile=StringIO('\n\n'.join(step.dockerfile)),
-                                           tag=step.tag)
-                for item in stream: print item
+                dockerfile = StringIO(unicode('\n\n'.join(step.dockerfile)))
+                if step.build_directory:
+                    stream = self.client.build(path=step.build_directory,
+                                               fileobj=dockerfile,
+                                               tag=step.tag,
+                                               pull=self.pull,
+                                               decode=True)
+                else:
+                    stream = self.client.build(fileobj=dockerfile,
+                                               tag=step.tag,
+                                               pull=self.pull,
+                                               decode=True)
+                for item in stream: print item['stream'].strip()
 
             if self.print_dockerfiles:
                 if '/' in step.tag: filename = 'Dockerfile.%s'%image
@@ -75,14 +90,14 @@ class DockerMaker(object):
             mydir = dep_definition.get('build_directory', None)
             if mydir is not None:
                 if step.build_directory is not None:
-                    step.tag = '_build%d_%s'%(len(build_steps),image)
+                    step.tag = '%dbuild_%s'%(len(build_steps),image)
                     build_steps.append(BuildStep(step.tag))
                     step = build_steps[-1]
                 step.build_directory = mydir
 
-            if 'command' in dep_definition:
+            if 'build' in dep_definition:
                 step.dockerfile.append('#Commands for %s'%d)
-                step.dockerfile.append(dep_definition['command'])
+                step.dockerfile.append(dep_definition['build'])
             else:
                 step.dockerfile.append('####end of requirements for %s'%d)
 
@@ -137,7 +152,8 @@ def main():
     args = make_arg_parser().parse_args()
     maker = DockerMaker(args.makefile,user=args.user,
                         build_images=not (args.no_build or args.list),
-                        print_dockerfiles=(args.print_dockerfiles or args.no_build))
+                        print_dockerfiles=(args.print_dockerfiles or args.no_build),
+                        pull=args.pull)
 
     if args.list:
         print 'TARGETS in `%s`'%args.makefile
@@ -159,6 +175,8 @@ def make_arg_parser():
                                      "`eval $(docker-machine env [machine-name])`")
     parser.add_argument('TARGETS',nargs="*",
                         help='Docker images to build as specified in the YAML file')
+    parser.add_argument('--pull',action='store_true',
+                        help='Pull updated external images')
     parser.add_argument('-f','--makefile',
                         default='DockerMake.yaml',
                         help='YAML file containing build instructions')
