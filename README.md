@@ -1,24 +1,30 @@
 # DockerMake
 Compose docker containers using human-readable YAML files.
 
+To use it, you'll need to run:
+```bash
+pip install pyyaml docker-py
+eval $(docker-machine env [machine-name])
+```
+
 Sample DockerMake.yaml:
 ```yaml
 devbase:
  FROM: phusion/baseimage
- command: |
+ build: |
   RUN apt-get -y update && apt-get -y install build-essential
 
 airline_data:
  requires:
   - devbase
  build_directory: sample_data/airline_data
- command: |
+ build: |
   ADD AirlinePassengers.csv
   
 python_image:
  requires:
   - devbase
- command: |
+ build: |
   RUN apt-get -y update \
   && apt-get install -y python python-pip
   && pip install pandas
