@@ -1,1 +1,41 @@
-#here's a test
+devbase:
+ FROM: phusion/baseimage
+ command: |
+  RUN apt-get -y update && apt-get -y install \
+      build-essential \
+   && mkdir /opt
+
+airline_data:
+ build_directory: sample_data/airline_data
+ command: |
+  ADD AirlinePassengers.csv
+
+plant_data:
+ build_directory: sample_data/plant_growth
+ command: |
+  ADD Puromycin.csv
+
+python_image:
+ requires:
+  - devbase
+ command: |
+  RUN apt-get -y update \
+  && apt-get install -y \
+    python \
+    python-dev \
+    python-pip \
+    liblapack-dev \
+    libblas-dev \
+    gfortran \
+    libpng12-dev \
+  && pip install \
+    numpy \
+    scipy \
+    pandas \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+data_science:
+ requires:
+  - python_image
+  - airline_data
+  - plant_data
