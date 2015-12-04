@@ -6,11 +6,15 @@ devbase:
    && mkdir /opt
 
 airline_data:
+ requires:
+  - devbase
  build_directory: sample_data/airline_data
  command: |
   ADD AirlinePassengers.csv
 
 plant_data:
+ requires:
+ - devbase
  build_directory: sample_data/plant_growth
  command: |
   ADD Puromycin.csv
