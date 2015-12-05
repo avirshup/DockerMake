@@ -5,6 +5,7 @@ Requires: python 2.7, docker-py, pyyaml (RUN: easy_install pip; pip install dock
 
 Copyright (c) 2015, Aaron Virshup. See LICENSE
 """
+import os
 from collections import OrderedDict
 from io import StringIO
 import argparse
@@ -12,11 +13,14 @@ import argparse
 import docker,docker.utils
 import yaml
 
+class BuildError(Exception): pass
+
+
 class BuildStep(object):
     def __init__(self,baseimage):
         self.dockerfile = ['FROM %s\n'%baseimage]
         self.tag = None
-        self.build_directory = None
+        self.build_dir = None
 
 
 class DockerMaker(object):
@@ -51,28 +55,63 @@ class DockerMaker(object):
         print 'Starting build for %s'%image
         build_steps = self.generate_build_order(image)
         for step in build_steps:
+            dockerfile = '\n\n'.join(step.dockerfile)
             if self.build_images:
-                dockerfile = StringIO(unicode('\n\n'.join(step.dockerfile)))
-                if step.build_directory:
-                    stream = self.client.build(path=step.build_directory,
-                                               fileobj=dockerfile,
-                                               tag=step.tag,
-                                               pull=self.pull,
-                                               decode=True)
-                else:
-                    stream = self.client.build(fileobj=dockerfile,
-                                               tag=step.tag,
-                                               pull=self.pull,
-                                               decode=True)
-                for item in stream: print item['stream'].strip()
+                self.build_step(step, dockerfile)
 
             if self.print_dockerfiles:
                 if '/' in step.tag: filename = 'Dockerfile.%s'%image
                 else: filename = 'Dockerfile.%s'%step.tag
 
-                with open(filename,'w') as dockerfile:
-                    print >> dockerfile,'\n'.join(step.dockerfile)
+                with open(filename,'w') as dfout:
+                    print >> dfout,dockerfile
         return step.tag
+
+    def build_step(self, step, dockerfile):
+        """
+        Drives an individual build step
+        """
+        if step.build_dir is not None:
+            tempname = '_docker_make_tmp/'
+            tempdir = '%s/%s' % (step.build_dir,tempname)
+            temp_df = tempdir + 'Dockerfile'
+            if not os.path.isdir(tempdir):
+                os.makedirs(tempdir)
+            with open(temp_df,'w') as df_out:
+                print >> df_out,dockerfile
+
+            build_path = os.path.abspath(step.build_dir)
+            fileobj = None
+            dockerpath = tempname+'Dockerfile'
+        else:
+            build_path = None
+            fileobj = StringIO(unicode(dockerfile))
+            dockerpath = None
+
+        stream = self.client.build(path=build_path,
+                                   tag=step.tag,
+                                   fileobj=fileobj,
+                                   pull=self.pull,
+                                   decode=True,
+                                   dockerfile=dockerpath)
+        for item in stream:
+            if item.keys() == ['stream']:
+                print item['stream'].strip()
+            else:
+                build_arguments = dict(path=build_path,
+                                       tag=step.tag,
+                                       fileobj=fileobj,
+                                       pull=self.pull,
+                                       decode=True,
+                                       dockerfile=dockerpath)
+                if 'errorDetail' in item or 'error' in item:
+                    raise BuildError(str(item)+'\n'+
+                                     str(dockerfile)+'\n'+str(build_arguments)+'\n'+
+                                     str(item))
+
+        if step.build_dir is not None:
+            os.unlink(temp_df)
+            os.rmdir(tempdir)
 
     def generate_build_order(self, image):
         """
@@ -81,7 +120,7 @@ class DockerMaker(object):
         """
         image_tag = self.user + image
         dependencies = self.sort_dependencies(image)
-        base = self.get_external_base_image(dependencies, image)
+        base = self.get_external_base_image(image, dependencies)
 
         build_steps = [BuildStep(base)]
         step = build_steps[0]
@@ -89,11 +128,11 @@ class DockerMaker(object):
             dep_definition = self.img_defs[d]
             mydir = dep_definition.get('build_directory', None)
             if mydir is not None:
-                if step.build_directory is not None:
+                if step.build_dir is not None:
                     step.tag = '%dbuild_%s'%(len(build_steps),image)
                     build_steps.append(BuildStep(step.tag))
                     step = build_steps[-1]
-                step.build_directory = mydir
+                step.build_dir = mydir
 
             if 'build' in dep_definition:
                 step.dockerfile.append('#Commands for %s'%d)
@@ -104,7 +143,7 @@ class DockerMaker(object):
         #Sets the last step's name to the final build target
         step.tag = image_tag
         for step in build_steps:
-            step.dockerfile.insert(0,'#Build directory: %s\n#tag: %s\n'%(step.build_directory,step.tag))
+            step.dockerfile.insert(0,'#Build directory: %s\n#tag: %s\n' % (step.build_dir, step.tag))
         return build_steps
 
     def sort_dependencies(self, com, dependencies=None):
@@ -128,7 +167,7 @@ class DockerMaker(object):
         dependencies[com] = None
         return dependencies
 
-    def get_external_base_image(self, dependencies, image):
+    def get_external_base_image(self, image, dependencies):
         """
         Makes sure that this image has exactly one external base image
         """
