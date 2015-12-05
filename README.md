@@ -2,7 +2,7 @@
 Compose docker containers using human-readable YAML files.
 
 ##### Requirements
-You'll need python2.7, pyyaml, docker-py, and access to a docker daemon. These commands will set up the software and environment:
+You'll need python2.7, pyyaml, docker-py, and access to a docker daemon. If you have pip and a docker-machine, you can run these commands to get set up:
 ```bash
 pip install pyyaml docker-py
 eval $(docker-machine env [machine-name])
