@@ -4,23 +4,16 @@ Multiple inheritance for your dockerfiles.
 Requires: python 2.7, docker-py, pyyaml (RUN: easy_install pip; pip install docker-py pyyaml)
 
 Copyright (c) 2015, Aaron Virshup. See LICENSE
+#TODO: shamelessly advertise on https://github.com/docker/docker/issues/735
 """
 import os
 from collections import OrderedDict
-from io import StringIO
+from io import StringIO,BytesIO
 import argparse
+import pprint
 
 import docker,docker.utils
 import yaml
-
-class BuildError(Exception): pass
-
-
-class BuildStep(object):
-    def __init__(self,baseimage):
-        self.dockerfile = ['FROM %s\n'%baseimage]
-        self.tag = None
-        self.build_dir = None
 
 
 class DockerMaker(object):
@@ -28,15 +21,17 @@ class DockerMaker(object):
                  build_images=True,
                  print_dockerfiles=False,
                  pull=False):
+
+        with open(makefile,'r') as yaml_file:
+            self.img_defs = yaml.load(yaml_file)
+
+        #Connect to docker daemon if necessary
         if build_images:
             connection = docker.utils.kwargs_from_env()
             connection['tls'].assert_hostname = False
             self.client = docker.Client(**connection)
         else:
             self.client = None
-
-        with open(makefile,'r') as yaml_file:
-            self.img_defs = yaml.load(yaml_file)
 
         if user and user[-1] != '/':
             self.user = user + '/'
@@ -56,21 +51,31 @@ class DockerMaker(object):
         build_steps = self.generate_build_order(image)
         for step in build_steps:
             dockerfile = '\n\n'.join(step.dockerfile)
+
+            #build the image
             if self.build_images:
                 self.build_step(step, dockerfile)
 
+            #Dump the dockerfile to a file
             if self.print_dockerfiles:
-                if '/' in step.tag: filename = 'Dockerfile.%s'%image
-                else: filename = 'Dockerfile.%s'%step.tag
-
+                if not os.path.exists('docker_makefiles'):
+                    os.makedirs('docker_makefiles')
+                if '/' in step.tag: filename = 'docker_make_files/Dockerfile.%s'%image
+                else: filename = 'docker_makefiles/Dockerfile.%s'%step.tag
                 with open(filename,'w') as dfout:
                     print >> dfout,dockerfile
+
         return step.tag
 
     def build_step(self, step, dockerfile):
         """
-        Drives an individual build step
+        Drives an individual build step. Build steps are separated by build_directory.
+        If a build has zero one or less build_directories, it will be built in a single
+        step.
         """
+        #set up the build context
+        build_args = dict(decode=True, tag=step.tag ,pull=self.pull,
+                          fileobj=None,  path=None, dockerfile=None)
         if step.build_dir is not None:
             tempname = '_docker_make_tmp/'
             tempdir = '%s/%s' % (step.build_dir,tempname)
@@ -80,35 +85,24 @@ class DockerMaker(object):
             with open(temp_df,'w') as df_out:
                 print >> df_out,dockerfile
 
-            build_path = os.path.abspath(step.build_dir)
-            fileobj = None
-            dockerpath = tempname+'Dockerfile'
+            build_args['path'] = os.path.abspath(step.build_dir)
+            build_args['dockerfile'] = tempname+'Dockerfile'
         else:
-            build_path = None
-            fileobj = StringIO(unicode(dockerfile))
-            dockerpath = None
+            build_args['fileobj'] = StringIO(unicode(dockerfile))
 
-        stream = self.client.build(path=build_path,
-                                   tag=step.tag,
-                                   fileobj=fileobj,
-                                   pull=self.pull,
-                                   decode=True,
-                                   dockerfile=dockerpath)
+        #start the build
+        stream = self.client.build(**build_args)
+
+        #monitor the output
         for item in stream:
             if item.keys() == ['stream']:
                 print item['stream'].strip()
+            elif 'errorDetail' in item or 'error' in item:
+                raise BuildError(dockerfile,item,build_args)
             else:
-                build_arguments = dict(path=build_path,
-                                       tag=step.tag,
-                                       fileobj=fileobj,
-                                       pull=self.pull,
-                                       decode=True,
-                                       dockerfile=dockerpath)
-                if 'errorDetail' in item or 'error' in item:
-                    raise BuildError(str(item)+'\n'+
-                                     str(dockerfile)+'\n'+str(build_arguments)+'\n'+
-                                     str(item))
+                print item
 
+        #remove the temporary dockerfile
         if step.build_dir is not None:
             os.unlink(temp_df)
             os.rmdir(tempdir)
@@ -129,6 +123,7 @@ class DockerMaker(object):
             mydir = dep_definition.get('build_directory', None)
             if mydir is not None:
                 if step.build_dir is not None:
+                    #Create a new build step if there's already a build directory
                     step.tag = '%dbuild_%s'%(len(build_steps),image)
                     build_steps.append(BuildStep(step.tag))
                     step = build_steps[-1]
@@ -143,7 +138,8 @@ class DockerMaker(object):
         #Sets the last step's name to the final build target
         step.tag = image_tag
         for step in build_steps:
-            step.dockerfile.insert(0,'#Build directory: %s\n#tag: %s\n' % (step.build_dir, step.tag))
+            step.dockerfile.insert(0,'#Build directory: %s\n#tag: %s' %
+                                   (step.build_dir, step.tag))
         return build_steps
 
     def sort_dependencies(self, com, dependencies=None):
@@ -186,6 +182,28 @@ class DockerMaker(object):
         if base is None:
             raise ValueError("No base image found in %s's dependencies" % image)
         return base
+
+
+class BuildError(Exception):
+    def __init__(self,dockerfile,item,build_args):
+        with open('dockerfile.fail','w') as dff:
+            print>>dff,dockerfile
+        with BytesIO() as stream:
+            print >> stream,'\n   -------- Docker daemon output --------'
+            pprint.pprint(item,stream,indent=4)
+            print >> stream,'   -------- Arguments to client.build --------'
+            pprint.pprint(build_args,stream,indent=4)
+            print >> stream,'This dockerfile was written to dockerfile.fail'
+            stream.seek(0)
+            super(BuildError,self).__init__(stream.read())
+
+
+class BuildStep(object):
+    def __init__(self,baseimage):
+        self.dockerfile = ['FROM %s\n'%baseimage]
+        self.tag = None
+        self.build_dir = None
+
 
 def main():
     args = make_arg_parser().parse_args()
