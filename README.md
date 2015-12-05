@@ -26,7 +26,7 @@ python_image:
   - devbase
  build: |
   RUN apt-get -y update \
-  && apt-get install -y python python-pip
+  && apt-get install -y python python-pip \
   && pip install pandas
   
 data_science:
@@ -61,3 +61,5 @@ optional arguments:
   -a, --all             Print or build all dockerfiles in teh container
   -l, --list            List all available targets in the file, then exit.
 ```
+
+Copyright (c) 2015, Aaron Virshup. Released under the simplified BSD license.
