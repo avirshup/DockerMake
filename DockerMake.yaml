@@ -14,7 +14,7 @@ airline_data:
   - data_image
  build_directory: sample_data/airline_data
  build: |
-  ADD AirlinePassengers.csv /data
+  ADD AirPassengers.csv /data
 
 plant_data:
  requires:
