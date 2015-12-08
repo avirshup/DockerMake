@@ -3,8 +3,7 @@
 Multiple inheritance for your dockerfiles.
 Requires: python 2.7, docker-py, pyyaml (RUN: easy_install pip; pip install docker-py pyyaml)
 
-Copyright (c) 2015, Aaron Virshup. See LICENSE
-#TODO: shamelessly advertise on https://github.com/docker/docker/issues/735
+Copyright (c) 2015, Autodesk Inc. See LICENSE
 """
 import os
 from collections import OrderedDict
@@ -49,8 +48,11 @@ class DockerMaker(object):
         """
         print 'Starting build for %s'%image
         build_steps = self.generate_build_order(image)
-        for step in build_steps:
-            dockerfile = '\n\n'.join(step.dockerfile)
+        for istep,step in enumerate(build_steps):
+            print '  **** Make Step %d: %s'%(istep+1,','.join(step.images))
+            print '     * Build directory: %s'%step.build_dir
+            print '     * Target image name: %s'%step.tag
+            dockerfile = '\n'.join(step.dockerfile)
 
             #build the image
             if self.build_images:
@@ -129,11 +131,12 @@ class DockerMaker(object):
                     step = build_steps[-1]
                 step.build_dir = mydir
 
+            step.images.append(d)
             if 'build' in dep_definition:
-                step.dockerfile.append('#Commands for %s'%d)
+                step.dockerfile.append('\n#Commands for %s'%d)
                 step.dockerfile.append(dep_definition['build'])
             else:
-                step.dockerfile.append('####end of requirements for %s'%d)
+                step.dockerfile.append('\n####end of requirements for %s\n'%d)
 
         #Sets the last step's name to the final build target
         step.tag = image_tag
@@ -203,6 +206,7 @@ class BuildStep(object):
         self.dockerfile = ['FROM %s\n'%baseimage]
         self.tag = None
         self.build_dir = None
+        self.images = []
 
 
 def main():
