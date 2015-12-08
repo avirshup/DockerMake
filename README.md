@@ -2,9 +2,9 @@
 Compose docker containers using human-readable YAML files.
 
 Written by:<br>
-<small>Aaron Virshup<br>
-Bio/Nano Research Group<br>
-Autodesk Research</small>
+Aaron Virshup<br>
+<sup><sub>Bio/Nano Research Group<br>
+Autodesk Research</sub></sup>
 
 ##### Requirements
 You'll need python2.7, pyyaml, docker-py, and access to a docker daemon. If you have pip and a docker-machine, you can run these commands to get set up:
