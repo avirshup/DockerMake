@@ -1,22 +1,15 @@
 # Docker-make
 Compose docker *images* using a dependency graph in a YAML file.
 
-_How is this different from docker-compose?_ `docker-make` automates and manages the process of building docker images. `docker-compose` spins up containers and links them to make serivces.
-
-#### What you can do with it
+### What you can do with it
  * Define small pieces of configuration or functionality, then mix them together into production docker images.
- * Easily build images that pull files from multiple directories on your filesystem
+ * Easily manage images that pull files from multiple directories on your filesystem
+ * Rebuild an entire stack of images as needed with a single command
  * Assign tags, repositories, registries and pushes in batches as part of your build
  
- 
-##### Requirements
-You'll need python2.7, pyyaml, docker-py, and access to a docker daemon. If you have pip and a docker-machine, you can run these commands to get set up:
-```bash
-pip install pyyaml docker-py
-eval $(docker-machine env [machine-name])
-```
+**How is this different from docker-compose?** `docker-make` automates and manages the process of building docker images. `docker-compose` spins up containers and links them to make serivces.
 
-#### Example
+### Example
 There are 5 docker images to be built in this example. `devbase` is just basic compilation tools. `airline_data` adds a large CSV file to `devbase`. `python_image` installs some basic data science tools on top of `devbase`. `data_science` combines *both* `airline_data` and `python_image` to give you a docker image with both the data and the tools.
 
 Here's the `DockerMake.yaml` file for this build:
@@ -73,6 +66,13 @@ The idea is to write dockerfile commands for each specific piece of functionalit
 [yet another image name]: ...
 ```
 
+
+#### Requirements
+You'll need python2.7, pyyaml, docker-py, and access to a docker daemon. If you have pip and a docker-machine, you can run these commands to get set up:
+```bash
+pip install pyyaml docker-py
+eval $(docker-machine env [machine-name])
+```
 
 ### Command line usage 
 ```
