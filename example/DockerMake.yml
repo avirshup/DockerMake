@@ -27,20 +27,18 @@ python_image:
  requires:
   - devbase
  build: |
-  RUN apt-get -y update \
-  && apt-get install -y \
+  RUN apt-get install -y \
     python \
     python-dev \
     python-pip \
+    python-numpy \
+    python-scipy \
+    python-pandas \
     liblapack-dev \
     libblas-dev \
     gfortran \
-    libpng12-dev \
-  && pip install \
-    numpy \
-    scipy \
-    pandas \
-  && apt-get clean && rm -rf /var/lib/apt/lists/*
+    libpng12-dev
+  RUN pip install Pint
 
 data_science:
  requires:
