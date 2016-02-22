@@ -3,16 +3,16 @@ Compose docker *images* using a dependency graph in a YAML file.
 
 ### What you can do with it
  * Define small pieces of configuration or functionality, then mix them together into production docker images.
+ * "Inherit" from multiple image builds
  * Easily manage images that pull files from multiple directories on your filesystem
  * Rebuild an entire stack of images as needed with a single command
- * Assign tags, repositories, registries and pushes in batches as part of your build
  
 **How is this different from docker-compose?** `docker-make` automates and manages the process of building docker images. `docker-compose` spins up containers and links them to make serivces.
 
 ### Example
-There are 5 docker images to be built in this example. `devbase` is just basic compilation tools. `airline_data` adds a large CSV file to `devbase`. `python_image` installs some basic data science tools on top of `devbase`. `data_science` combines *both* `airline_data` and `python_image` to give you a docker image with both the data and the tools.
+This example builds a single docker image called `data_science`. It does this by mixing together four components: `devbase` (the base image), `airline_data` (a big CSV file), and `python_image` (a python installation). `docker-make` will create an image that combines all of these components.
 
-Here's the `DockerMake.yaml` file for this build:
+Here's the `DockerMake.yaml` file:
 ```yaml
 devbase:
  FROM: phusion/baseimage
@@ -42,7 +42,7 @@ data_science:
 
 To build an image called `alice/data_science`, you can run:
 ```bash
-docker-make.py --user alice data_science
+docker-make.py data_science --repository alice
 ```
 which will create an image with all the commands in `python_image` and `airline_data`.
 
