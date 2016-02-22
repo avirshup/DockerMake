@@ -3,7 +3,7 @@
 Multiple inheritance for your dockerfiles.
 Requires: python 2.7, docker-py, pyyaml (RUN: easy_install pip; pip install docker-py pyyaml)
 
-Copyright (c) 2015, Aaron Virshup. See LICENSE
+Copyright (c) 2016, Autodesk Research. See LICENSE
 """
 import sys
 import os
