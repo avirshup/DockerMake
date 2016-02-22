@@ -73,34 +73,65 @@ The idea is to write dockerfile commands for each specific piece of functionalit
 
 ### Command line usage 
 ```
-usage: docker-make.py [-h] [--pull] [-f MAKEFILE] [-u USER] [-p] [-n] [-a]
-                      [-l]
+usage: docker-make.py [-h] [-f MAKEFILE] [-a] [-l]
+                      [--requires [REQUIRES [REQUIRES ...]]] [--name NAME]
+                      [-p] [-n] [--pull] [--no-cache]
+                      [--repository REPOSITORY] [--tag TAG]
+                      [--push-to-registry] [--help-yaml]
                       [TARGETS [TARGETS ...]]
 
 NOTE: Docker environmental variables must be set. For a docker-machine, run
 `eval $(docker-machine env [machine-name])`
 
-positional arguments:
-  TARGETS               Docker images to build as specified in the YAML file
-
 optional arguments:
   -h, --help            show this help message and exit
-  --pull                Pull updated external images
+
+Choosing what to build:
+  TARGETS               Docker images to build as specified in the YAML file
   -f MAKEFILE, --makefile MAKEFILE
                         YAML file containing build instructions
-                        (default: DockerMake.yaml)
-  -u USER, --user USER  Append this user tag to all built images, e.g.
-                        `docker_make hello-world -u elvis` will tag the image
-                        as `elvis/hello-world`
+  -a, --all             Print or build all images (or those specified by
+                        _ALL_)
+  -l, --list            List all available targets in the file, then exit.
+  --requires [REQUIRES [REQUIRES ...]]
+                        Build a special image from these requirements.
+                        Requires --name
+  --name NAME           Name for custom docker images (requires --requires)
+
+Dockerfiles:
   -p, --print_dockerfiles
                         Print out the generated dockerfiles named
                         `Dockerfile.[image]`
   -n, --no_build        Only print Dockerfiles, don't build them. Implies
-                        --print_dockerfiles.
-  -a, --all             Print or build all dockerfiles in teh container
-  -l, --list            List all available targets in the file, then exit.
+                        --print.
+
+Image caching:
+  --pull                Always try to pull updated FROM images
+  --no-cache            Rebuild every layer
+
+Repositories and tags:
+  --repository REPOSITORY, -r REPOSITORY, -u REPOSITORY
+                        Prepend this repository to all built images, e.g.
+                        `docker-make hello-world -u quay.io/elvis` will tag
+                        the image as `quay.io/elvis/hello-world`. You can add
+                        a ':' to the end to image names into tags: `docker-
+                        make -u quay.io/elvis/repo: hello-world` will create
+                        the image in the elvis repository: quay.io/elvis/repo
+                        :hello-world
+  --tag TAG, -t TAG     Tag all built images with this tag. If image names are
+                        ALREADY tags (i.e., your repo name ends in a ":"),
+                        this will append the tag name with a dash. For
+                        example: `docker-make hello-world -u elvis/repo: -t
+                        1.0` will create the image "elvis/repo:hello-world-1.0
+  --push-to-registry, -P
+                        Push all built images to the repository specified
+                        (only if image repository contains a URL) -- to push
+                        to dockerhub.com, use index.docker.io as the registry)
+
+Help:
+  --help-yaml           Print summary of YAML file format and exit.
 ```
 
 
 
-Copyright (c) 2015, Autodesk Inc. Released under the simplified BSD license.
+Copyright (c) 2016, Autodesk Inc. Released under the simplified BSD license.
