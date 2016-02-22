@@ -1,6 +1,5 @@
 # Docker-make
-Compose docker *images* using a dependency graph in a YAML file.
-
+Build and manage stacks of docker images - a dependency graph for Dockerfiles
  
 Table of Contents
 =================
@@ -16,7 +15,12 @@ Table of Contents
  * Easily manage images that pull files from multiple directories on your filesystem
  * Rebuild an entire stack of images as needed with a single command
  
-**How is this different from docker-compose?** `docker-make` automates and manages the process of building docker images. `docker-compose` spins up containers and links them to make serivces.
+**How is this different from docker-compose?**<br> `docker-make` automates and manages the process of building docker images. `docker-compose` spins up containers and links them to make serivces.
+
+**How is this different from the FROM command in Dockerfiles?**
+ 1. Using the `requires` field, you can inherit from multiple images.
+ 2. You can create builds that reference multiple directories on your filesystem using the `build_directory` keyword.
+ 3. The builds are not tied to any image's tag or repository - when you build an image with `docker-make`, it will be up-to-date. 
 
 ### Example
 This example builds a single docker image called `data_science`. It does this by mixing together four components: `devbase` (the base image), `airline_data` (a big CSV file), and `python_image` (a python installation). `docker-make` will create an image that combines all of these components.
