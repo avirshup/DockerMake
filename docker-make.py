@@ -264,6 +264,12 @@ def main():
     else:
         targets = args.TARGETS
 
+    if not targets:
+        print 'No build targets specified!'
+        print 'Targets in `%s`:' % args.makefile
+        for item in maker.img_defs.keys(): print ' *', item
+        return
+
     # Actually build the images! (or Dockerfiles)
     built, warnings = [], []
     for t in targets:
