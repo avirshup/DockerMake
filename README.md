@@ -1,11 +1,14 @@
-# DockerMake
-Compose docker containers using human-readable YAML files.
+# Docker-make
+Compose docker *images* using a dependency graph in a YAML file.
 
-Written by:<br>
-Aaron Virshup<br>
-<sup><sub>Bio/Nano Research Group<br>
-Autodesk Research</sub></sup>
+_How is this different from docker-compose?_ `docker-make` automates and manages the process of building docker images. `docker-compose` spins up containers and links them to make serivces.
 
+#### What you can do with it
+ * Define small pieces of configuration or functionality, then mix them together into production docker images.
+ * Easily build images that pull files from multiple directories on your filesystem
+ * Assign tags, repositories, registries and pushes in batches as part of your build
+ 
+ 
 ##### Requirements
 You'll need python2.7, pyyaml, docker-py, and access to a docker daemon. If you have pip and a docker-machine, you can run these commands to get set up:
 ```bash
