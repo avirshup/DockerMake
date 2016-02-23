@@ -1,5 +1,13 @@
 # Docker-make
-Compose docker *images* using a dependency graph in a YAML file.
+Build and manage stacks of docker images - a dependency graph for Dockerfiles
+ 
+Table of Contents
+=================
+ * [What you can do with it](#what-you-can-do-with-it)
+ * [Example](#example)
+ * [Writing DockerMake\.yaml](#writing-dockermakeyaml)
+ * [Requirements](#requirements)
+ * [Command line usage](#command-line-usage)
 
 ### What you can do with it
  * Define small pieces of configuration or functionality, then mix them together into production docker images.
@@ -7,7 +15,12 @@ Compose docker *images* using a dependency graph in a YAML file.
  * Easily manage images that pull files from multiple directories on your filesystem
  * Rebuild an entire stack of images as needed with a single command
  
-**How is this different from docker-compose?** `docker-make` automates and manages the process of building docker images. `docker-compose` spins up containers and links them to make serivces.
+**How is this different from docker-compose?**<br> `docker-make` automates and manages the process of building docker images. `docker-compose` spins up containers and links them to make serivces.
+
+**How is this different from the FROM command in Dockerfiles?**
+ 1. Using the `requires` field, you can inherit from multiple images.
+ 2. You can create builds that reference multiple directories on your filesystem using the `build_directory` keyword.
+ 3. The builds are not tied to any image's tag or repository - when you build an image with `docker-make`, it will be up-to-date. 
 
 ### Example
 This example builds a single docker image called `data_science`. It does this by mixing together three components: `devbase` (the base image), `airline_data` (a big CSV file), and `python_image` (a python installation). `docker-make` will create an image that combines all of these components.
@@ -42,6 +55,7 @@ data_science:
   - python_image
   - airline_data
   - plant_data
+
 ```
 
 To build an image called `alice/data_science`, you can run:
@@ -76,8 +90,8 @@ The idea is to write dockerfile commands for each specific piece of functionalit
 ```
 
 
-### Requirements
-You'll need python2.7, pyyaml, docker-py, and access to a docker daemon. If you have pip and a docker-machine, you can run these commands to get set up:
+#### Requirements
+Run `docker-make.py` from wherever you like. You'll need python2.7, pyyaml, docker-py, and access to a docker daemon. If you have pip and a docker-machine, you can run these commands to get set up:
 ```bash
 pip install pyyaml docker-py
 eval $(docker-machine env [machine-name])
@@ -145,5 +159,6 @@ Help:
 ```
 
 
+Written by Aaron Virshup, Bio/Nano Research Group, Autodesk Research
 
 Copyright (c) 2016, Autodesk Inc. Released under the simplified BSD license.
