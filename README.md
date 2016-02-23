@@ -10,34 +10,38 @@ Compose docker *images* using a dependency graph in a YAML file.
 **How is this different from docker-compose?** `docker-make` automates and manages the process of building docker images. `docker-compose` spins up containers and links them to make serivces.
 
 ### Example
-This example builds a single docker image called `data_science`. It does this by mixing together four components: `devbase` (the base image), `airline_data` (a big CSV file), and `python_image` (a python installation). `docker-make` will create an image that combines all of these components.
+This example builds a single docker image called `data_science`. It does this by mixing together three components: `devbase` (the base image), `airline_data` (a big CSV file), and `python_image` (a python installation). `docker-make` will create an image that combines all of these components.
 
 Here's the `DockerMake.yaml` file:
 ```yaml
 devbase:
  FROM: phusion/baseimage
  build: |
-  RUN apt-get -y update && apt-get -y install build-essential
+  RUN apt-get -y update && apt-get -y install 
+      build-essential 
+   && mkdir -p /opt
 
 airline_data:
- requires:
-  - devbase
  build_directory: sample_data/airline_data
  build: |
-  ADD AirlinePassengers.csv
-  
+  ADD AirPassengers.csv /data
+
+plant_data:
+ build_directory: sample_data/plant_growth
+ build: |
+  ADD Puromycin.csv /data
+
 python_image:
  requires:
   - devbase
  build: |
-  RUN apt-get -y update \
-  && apt-get install -y python python-pip \
-  && pip install pandas
-  
+  RUN apt-get install -y python python-pandas
+
 data_science:
  requires:
   - python_image
   - airline_data
+  - plant_data
 ```
 
 To build an image called `alice/data_science`, you can run:
@@ -48,7 +52,12 @@ which will create an image with all the commands in `python_image` and `airline_
 
 This works by dynamically generating a new Dockerfile every time you ask to build something. However, most of the commands will be cached, especially if you have a large hierarchy of base images. This actually leads to _less_ rebuilding than if you had a series of Dockerfiles linked together with `FROM` commands.
 
-#### Writing DockerMake.yaml
+Here's the dependency graph and generated Dockerfiles:
+
+![dependency graph](img/step1.png)
+![dockerfiles](img/step2.png)
+
+### Writing DockerMake.yaml
 The idea is to write dockerfile commands for each specific piece of functionality in the `build` field, and "inherit" all other functionality from a list of other components that your image `requires`. If you need to add files with the ADD and COPY commands,  specify the root directory for those files with `build_directory`. Your tree of "requires" must have _exactly one_ unique named base image in the `FROM` field.
 ```yaml
 [image_name]:
@@ -67,7 +76,7 @@ The idea is to write dockerfile commands for each specific piece of functionalit
 ```
 
 
-#### Requirements
+### Requirements
 You'll need python2.7, pyyaml, docker-py, and access to a docker daemon. If you have pip and a docker-machine, you can run these commands to get set up:
 ```bash
 pip install pyyaml docker-py
