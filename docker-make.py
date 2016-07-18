@@ -1,9 +1,20 @@
 #!/usr/bin/env python2.7
+# Copyright 2016 Autodesk Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Multiple inheritance for your dockerfiles.
 Requires: python 2.7, docker-py, pyyaml (RUN: easy_install pip; pip install docker-py pyyaml)
-
-Copyright (c) 2016, Autodesk Research. See LICENSE
 """
 import sys
 import os
@@ -16,6 +27,7 @@ import pprint
 import docker, docker.utils
 import yaml
 
+
 class DockerMaker(object):
     def __init__(self, makefile, repository=None,
                  build_images=True,
@@ -24,8 +36,10 @@ class DockerMaker(object):
                  tag=None,
                  pull=False):
 
+        self._sources = set()
         self.makefile_path = makefile
-        self.img_defs, self.all_targets = self.parse_yaml()
+        self.img_defs = self.parse_yaml(self.makefile_path)
+        self.all_targets = self.img_defs.pop('_ALL_', None)
 
         # Connect to docker daemon if necessary
         if build_images:
@@ -47,11 +61,21 @@ class DockerMaker(object):
         self.pull = pull
         self.no_cache = no_cache
 
-    def parse_yaml(self):
-        with open(self.makefile_path, 'r') as yaml_file:
-            yfile = yaml.load(yaml_file)
-        _all_ = yfile.pop('_ALL_', None)
-        return yfile, _all_
+    def parse_yaml(self, filename):
+        fname = os.path.expanduser(filename)
+        print 'READING %s' % os.path.expanduser(fname)
+        if fname in self._sources: raise ValueError('Circular _SOURCE_')
+        self._sources.add(fname)
+
+        with open(fname, 'r') as yaml_file:
+            yamldefs = yaml.load(yaml_file)
+
+        sourcedefs = {}
+        for s in yamldefs.get('_SOURCES_', []):
+            sourcedefs.update(self.parse_yaml(s))
+
+        sourcedefs.update(yamldefs)
+        return sourcedefs
 
     def build(self, image):
         """
@@ -145,6 +169,7 @@ class DockerMaker(object):
             dep_definition = self.img_defs[d]
             mydir = dep_definition.get('build_directory', None)
             if mydir is not None:
+                mydir = os.path.expanduser(mydir)  # expands `~` to home directory
                 if step.build_dir is not None:
                     # Create a new build step if there's already a build directory
                     step.tag = '%dbuild_%s' % (len(build_steps), image)
@@ -169,7 +194,7 @@ class DockerMaker(object):
     def sort_dependencies(self, com, dependencies=None):
         """
         Topologically sort the docker commands by their requirements
-        TODO: make this sorting unique to take advantage of caching
+        TODO: sort using a "maximum common tree"?
         :param com: process this docker image's dependencies
         :param dependencies: running cache of sorted dependencies (ordered dict)
         :return type: OrderedDict
@@ -280,7 +305,7 @@ def main():
             success, w = push(maker, name)
             warnings.extend(w)
             if not success: built[-1] += ' -- PUSH FAILED'
-            else: built[-1] += 'pushed to %s' % name.split('/')[0]
+            else: built[-1] += ' -- pushed to %s' % name.split('/')[0]
 
     # Summarize the build process
     print '\ndocker-make finished.'
@@ -414,6 +439,7 @@ def make_arg_parser():
                     help='Always try to pull updated FROM images')
     ca.add_argument('--no-cache', action='store_true',
                     help="Rebuild every layer")
+    # TODO: add a way to invalidate a specific target
 
     rt = parser.add_argument_group('Repositories and tags')
     rt.add_argument('--repository', '-r', '-u',
