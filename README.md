@@ -25,7 +25,7 @@ Table of Contents
 ### Example
 This example builds a single docker image called `data_science`. It does this by mixing together three components: `devbase` (the base image), `airline_data` (a big CSV file), and `python_image` (a python installation). `docker-make` will create an image that combines all of these components.
 
-Here's the `DockerMake.yaml` file:
+Here's the `DockerMake.yml` file:
 ```yaml
 devbase:
  FROM: phusion/baseimage
