@@ -1,5 +1,5 @@
 # Docker-make
-Build and manage stacks of docker images - a dependency graph for Dockerfiles
+Build and manage stacks of Docker images - a dependency graph for Dockerfiles
  
 Table of Contents
 =================
@@ -10,12 +10,12 @@ Table of Contents
  * [Command line usage](#command-line-usage)
 
 ### What you can do with it
- * Define small pieces of configuration or functionality, then mix them together into production docker images.
+ * Define small pieces of configuration or functionality, then mix them together into production Docker images.
  * "Inherit" from multiple image builds
  * Easily manage images that pull files from multiple directories on your filesystem
  * Rebuild an entire stack of images as needed with a single command
  
-**How is this different from docker-compose?**<br> `docker-make` automates and manages the process of building docker images. `docker-compose` spins up containers and links them to make serivces.
+**How is this different from docker-compose?**<br> `docker-make` automates and manages the process of building Docker images. `docker-compose` spins up containers and links them to make services.
 
 **How is this different from the FROM command in Dockerfiles?**
  1. Using the `requires` field, you can inherit from multiple images.
@@ -25,7 +25,7 @@ Table of Contents
 ### Example
 [Click here to see a production-level example.](https://github.com/Autodesk/molecular-design-toolkit/blob/master/docker_images/DockerMake.yml)
 
-This example builds a single docker image called `data_science`. It does this by mixing together three components: `devbase` (the base image), `airline_data` (a big CSV file), and `python_image` (a python installation). `docker-make` will create an image that combines all of these components.
+This example builds a single Docker image called `data_science`. It does this by mixing together three components: `devbase` (the base image), `airline_data` (a big CSV file), and `python_image` (a python installation). `docker-make` will create an image that combines all of these components.
 
 Here's the `DockerMake.yml` file:
 ```yaml
@@ -74,7 +74,7 @@ Here's the dependency graph and generated Dockerfiles:
 ![dockerfiles](img/step2.png)
 
 ### Writing DockerMake.yaml
-The idea is to write dockerfile commands for each specific piece of functionality in the `build` field, and "inherit" all other functionality from a list of other components that your image `requires`. If you need to add files with the ADD and COPY commands,  specify the root directory for those files with `build_directory`. Your tree of "requires" must have _exactly one_ unique named base image in the `FROM` field.
+The idea is to write Dockerfile commands for each specific piece of functionality in the `build` field, and "inherit" all other functionality from a list of other components that your image `requires`. If you need to add files with the `ADD` and `COPY` commands,  specify the root directory for those files with `build_directory`. Your tree of "requires" must have _exactly one_ unique named base image in the `FROM` field.
 ```yaml
 [image_name]:
   build_directory: [relative path where the ADD and COPY commands will look for files]
@@ -93,7 +93,7 @@ The idea is to write dockerfile commands for each specific piece of functionalit
 
 
 #### Requirements
-Run `docker-make.py` from wherever you like. You'll need python2.7, pyyaml, docker-py, and access to a docker daemon. If you have pip and a docker-machine, you can run these commands to get set up:
+Run `docker-make.py` from wherever you like. You'll need Python, pyyaml, docker-py, and access to a Docker daemon. If you have pip and a docker-machine, you can run these commands to get set up:
 ```bash
 pip install pyyaml docker-py
 eval $(docker-machine env [machine-name])
@@ -124,11 +124,11 @@ Choosing what to build:
   --requires [REQUIRES [REQUIRES ...]]
                         Build a special image from these requirements.
                         Requires --name
-  --name NAME           Name for custom docker images (requires --requires)
+  --name NAME           Name for custom Docker images (requires --requires)
 
 Dockerfiles:
   -p, --print_dockerfiles
-                        Print out the generated dockerfiles named
+                        Print out the generated Dockerfiles named
                         `Dockerfile.[image]`
   -n, --no_build        Only print Dockerfiles, don't build them. Implies
                         --print.

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 # Copyright 2016 Autodesk Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Multiple inheritance for your dockerfiles.
-Requires: python 2.7, docker-py, pyyaml (RUN: easy_install pip; pip install docker-py pyyaml)
+Multiple inheritance for your Dockerfiles.
+Requires: Python, docker-py, pyyaml (RUN: easy_install pip; pip install docker-py pyyaml)
 """
 import sys
 import os
 import textwrap
+from builtins import str
 from collections import OrderedDict
 from io import StringIO, BytesIO
 import argparse
@@ -63,7 +64,7 @@ class DockerMaker(object):
 
     def parse_yaml(self, filename):
         fname = os.path.expanduser(filename)
-        print 'READING %s' % os.path.expanduser(fname)
+        print('READING %s' % os.path.expanduser(fname))
         if fname in self._sources: raise ValueError('Circular _SOURCE_')
         self._sources.add(fname)
 
@@ -83,12 +84,12 @@ class DockerMaker(object):
         :param image: name of the image from the yaml file to build
         :return: final tagged image name
         """
-        print 'docker-make starting build for %s' % image
+        print('docker-make starting build for %s' % image)
         build_steps = self.generate_build_order(image)
         for istep, step in enumerate(build_steps):
-            print '  **** DockerMake Step %d/%d: %s ***' % (istep + 1, len(build_steps), ','.join(step.images))
-            print '     * Build directory: %s' % step.build_dir
-            print '     * Target image name: %s' % step.tag
+            print('  **** docker-make Step %d/%d: %s ***' % (istep + 1, len(build_steps), ','.join(step.images)))
+            print('     * Build directory: %s' % step.build_dir)
+            print('     * Target image name: %s' % step.tag)
             dockerfile = '\n'.join(step.dockerfile)
 
             # build the image
@@ -104,7 +105,7 @@ class DockerMaker(object):
                 else:
                     filename = 'docker_makefiles/Dockerfile.%s' % step.tag
                 with open(filename, 'w') as dfout:
-                    print >> dfout, dockerfile
+                    print(dockerfile, file=dfout)
 
         return step.tag
 
@@ -125,24 +126,24 @@ class DockerMaker(object):
             if not os.path.isdir(tempdir):
                 os.makedirs(tempdir)
             with open(temp_df, 'w') as df_out:
-                print >> df_out, dockerfile
+                print(dockerfile, file=df_out)
 
             build_args['path'] = os.path.abspath(step.build_dir)
             build_args['dockerfile'] = tempname + 'Dockerfile'
         else:
-            build_args['fileobj'] = StringIO(unicode(dockerfile))
+            build_args['fileobj'] = StringIO(str(dockerfile))
 
         # start the build
         stream = self.client.build(**build_args)
 
         # monitor the output
         for item in stream:
-            if item.keys() == ['stream']:
-                print item['stream'].strip()
+            if list(item.keys()) == ['stream']:
+                print(item['stream'].strip())
             elif 'errorDetail' in item or 'error' in item:
                 raise BuildError(dockerfile, item, build_args)
             else:
-                print item
+                print(item)
 
         # remove the temporary dockerfile
         if step.build_dir is not None:
@@ -193,9 +194,9 @@ class DockerMaker(object):
 
     def sort_dependencies(self, com, dependencies=None):
         """
-        Topologically sort the docker commands by their requirements
+        Topologically sort the Docker commands by their requirements
         TODO: sort using a "maximum common tree"?
-        :param com: process this docker image's dependencies
+        :param com: process this Docker image's dependencies
         :param dependencies: running cache of sorted dependencies (ordered dict)
         :return type: OrderedDict
         """
@@ -236,13 +237,13 @@ class DockerMaker(object):
 class BuildError(Exception):
     def __init__(self, dockerfile, item, build_args):
         with open('dockerfile.fail', 'w') as dff:
-            print>> dff, dockerfile
+            print(dockerfile, file=dff)
         with BytesIO() as stream:
-            print >> stream, '\n   -------- Docker daemon output --------'
+            print('\n   -------- Docker daemon output --------', file=stream)
             pprint.pprint(item, stream, indent=4)
-            print >> stream, '   -------- Arguments to client.build --------'
+            print('   -------- Arguments to client.build --------', file=stream)
             pprint.pprint(build_args, stream, indent=4)
-            print >> stream, 'This dockerfile was written to dockerfile.fail'
+            print('This Dockerfile was written to dockerfile.fail', file=stream)
             stream.seek(0)
             super(BuildError, self).__init__(stream.read())
 
@@ -270,8 +271,8 @@ def main():
                         pull=args.pull, no_cache=args.no_cache, tag=args.tag)
 
     if args.list:
-        print 'TARGETS in `%s`' % args.makefile
-        for item in maker.img_defs.keys(): print ' *', item
+        print('TARGETS in `%s`' % args.makefile)
+        for item in list(maker.img_defs.keys()): print(' *', item)
         return
 
     # Assemble custom requirements target
@@ -285,21 +286,21 @@ def main():
         if maker.all_targets is not None:
             targets = maker.all_targets
         else:
-            targets = maker.img_defs.keys()
+            targets = list(maker.img_defs.keys())
     else:
         targets = args.TARGETS
 
     if not targets:
-        print 'No build targets specified!'
-        print 'Targets in `%s`:' % args.makefile
-        for item in maker.img_defs.keys(): print ' *', item
+        print('No build targets specified!')
+        print('Targets in `%s`:' % args.makefile)
+        for item in list(maker.img_defs.keys()): print(' *', item)
         return
 
     # Actually build the images! (or Dockerfiles)
     built, warnings = [], []
     for t in targets:
         name = maker.build(t)
-        print '  docker-make built:', name
+        print('  docker-make built:', name)
         built.append(name)
         if args.push_to_registry:
             success, w = push(maker, name)
@@ -308,12 +309,12 @@ def main():
             else: built[-1] += ' -- pushed to %s' % name.split('/')[0]
 
     # Summarize the build process
-    print '\ndocker-make finished.'
-    print 'Built: '
-    for item in built: print ' *', item
+    print('\ndocker-make finished.')
+    print('Built: ')
+    for item in built: print(' *', item)
     if warnings:
-        print 'Warnings:'
-        for item in warnings: print ' *', item
+        print('Warnings:')
+        for item in warnings: print(' *', item)
 
 
 def push(maker, name):
@@ -323,22 +324,22 @@ def push(maker, name):
         warn = 'WARNING: could not push %s - ' \
                'repository name does not contain a registry URL' % name
         warnings.append(warn)
-        print warn
+        print(warn)
     else:
-        print '  Pushing %s to %s:' % (name, name.split('/')[0])
+        print('  Pushing %s to %s:' % (name, name.split('/')[0]))
         line = {'error': 'no push information received'}
         _lastid = None
         for line in maker.client.push(name, stream=True):
             line = yaml.load(line)
             if 'status' in line:
                 if line.get('id', None) == _lastid and line['status'] == 'Pushing':
-                    print '\r', line['status'], line['id'], line.get('progress', ''),
+                    print('\r', line['status'], line['id'], line.get('progress', ''), end=' ')
                     sys.stdout.flush()
                 else:
-                    print line['status'], line.get('id', '')
+                    print(line['status'], line.get('id', ''))
                     _lastid = line.get('id', None)
             else:
-                print line
+                print(line)
         if 'error' in line:
             warnings.append('WARNING: push failed for %s. Message: %s' % (name, line['error']))
         else:
@@ -347,10 +348,10 @@ def push(maker, name):
 
 
 def print_yaml_help():
-    print "A brief introduction to writing Dockerfile.yml files:\n"
+    print("A brief introduction to writing DockerMake.yml files:\n")
 
-    print 'SYNTAX:'
-    print printable_code("""[image_name]:
+    print('SYNTAX:')
+    print(printable_code("""[image_name]:
   build_directory: [relative path where the ADD and COPY commands will look for files]
   requires:
    - [other image name]
@@ -362,19 +363,19 @@ def print_yaml_help():
    [Dockerfile commands go here]
 
 [other image name]: ...
-[yet another image name]: ...""")
+[yet another image name]: ..."""))
 
-    print
-    print textwrap.fill("The idea is to write dockerfile commands for each specific "
+    print()
+    print(textwrap.fill("The idea is to write Dockerfile commands for each specific "
                         'piece of functionality in the build field, and "inherit" all other'
                         ' functionality from a list of other components that your image requires. '
                         'If you need to add files with the ADD and COPY commands, specify the root'
                         ' directory for those files with build_directory. Your tree of '
                         '"requires" must have exactly one unique named base image '
-                        'in the FROM field.')
+                        'in the FROM field.'))
 
-    print '\n\nAN EXAMPLE:'
-    print printable_code("""devbase:
+    print('\n\nAN EXAMPLE:')
+    print(printable_code("""devbase:
  FROM: phusion/baseimage
  build: |
   RUN apt-get -y update && apt-get -y install build-essential
@@ -397,7 +398,7 @@ python_image:
 data_science:
  requires:
   - python_image
-  - airline_data""")
+  - airline_data"""))
 
 
 def printable_code(c):
@@ -426,11 +427,11 @@ def make_arg_parser():
     bo.add_argument('--requires', nargs="*",
                     help='Build a special image from these requirements. Requires --name')
     bo.add_argument('--name', type=str,
-                    help="Name for custom docker images (requires --requires)")
+                    help="Name for custom Docker images (requires --requires)")
 
     df = parser.add_argument_group('Dockerfiles')
     df.add_argument('-p', '--print_dockerfiles', action='store_true',
-                    help="Print out the generated dockerfiles named `Dockerfile.[image]`")
+                    help="Print out the generated Dockerfiles named `Dockerfile.[image]`")
     df.add_argument('-n', '--no_build', action='store_true',
                     help='Only print Dockerfiles, don\'t build them. Implies --print.')
 
