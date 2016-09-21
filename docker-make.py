@@ -44,7 +44,8 @@ class DockerMaker(object):
         # Connect to docker daemon if necessary
         if build_images:
             connection = docker.utils.kwargs_from_env()
-            connection['tls'].assert_hostname = False
+            if 'tls' in connection:
+                connection['tls'].assert_hostname = False
             self.client = docker.Client(**connection)
         else:
             self.client = None
