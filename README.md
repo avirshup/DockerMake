@@ -1,29 +1,49 @@
 # Docker-make
-Build and manage stacks of docker images - a dependency graph for Dockerfiles
+Build and manage stacks of docker images - a dependency graph for Docker images
  
 Table of Contents
 =================
+ * [Install](#Install)
+ * [Run it](#Run-it)
  * [What you can do with it](#what-you-can-do-with-it)
  * [Example](#example)
  * [Writing DockerMake\.yaml](#writing-dockermakeyaml)
  * [Requirements](#requirements)
  * [Command line usage](#command-line-usage)
 
+
+### Install
+
+Requires Docker (obviously), and Python 2.7 or 3.4+ with pip.
+
+```
+pip install git+https://github.com/avirshup/DockerMake 
+```
+
+This will install the command line tool, `docker-make`, and its supporting python package, which you can import as `import dockermake`. 
+
+
+### Run it
+
+To build some illustrative examples, try running:
+
+```bash
+wget https://raw.githubusercontent.com/avirshup/DockerMake/master/example/DockerMake.yml
+docker-make --list
+docker-make data_science --repo docker.io/myusername --tag testbuild
+```
+
+
 ### What you can do with it
  * Define small pieces of configuration or functionality, then mix them together into production docker images.
- * "Inherit" from multiple image builds
+ * "Inherit" Dockerfile instructions from multiple sources
+ * **New**: Build an artifact (such as an executable or library) in one image, then copy it into a smaller image for deployment
  * Easily manage images that pull files from multiple directories on your filesystem
  * Rebuild an entire stack of images as needed with a single command
  
-**How is this different from docker-compose?**<br> `docker-make` automates and manages the process of building docker images. `docker-compose` spins up containers and links them to make serivces.
-
-**How is this different from the FROM command in Dockerfiles?**
- 1. Using the `requires` field, you can inherit from multiple images.
- 2. You can create builds that reference multiple directories on your filesystem using the `build_directory` keyword.
- 3. The builds are not tied to any image's tag or repository - when you build an image with `docker-make`, it will be up-to-date. 
 
 ### Example
-[Click here to see a production-level example.](https://github.com/Autodesk/molecular-design-toolkit/blob/master/docker_images/DockerMake.yml)
+[Click here to see how we're using this in production.](https://github.com/Autodesk/molecular-design-toolkit/blob/master/docker_images/DockerMake.yml)
 
 This example builds a single docker image called `data_science`. It does this by mixing together three components: `devbase` (the base image), `airline_data` (a big CSV file), and `python_image` (a python installation). `docker-make` will create an image that combines all of these components.
 
@@ -77,18 +97,28 @@ Here's the dependency graph and generated Dockerfiles:
 The idea is to write dockerfile commands for each specific piece of functionality in the `build` field, and "inherit" all other functionality from a list of other components that your image `requires`. If you need to add files with the ADD and COPY commands,  specify the root directory for those files with `build_directory`. Your tree of "requires" must have _exactly one_ unique named base image in the `FROM` field.
 ```yaml
 [image_name]:
-  build_directory: [relative path where the ADD and COPY commands will look for files]
   requires:
-   - [other image name]
-   - [yet another image name]
+    - [other image name]
+    - [yet another image name]
+    [...]
   FROM: [named_base_image]
   build: |
-   RUN [something]
-   ADD [something else]
-   [Dockerfile commands go here]
+    RUN [something]
+    ADD [something else]
+    [Dockerfile commands go here]
+  build_directory: [path where the ADD and COPY commands will look for files]
+    # note that the "build_directory" path can be relative or absolute.
+    # if it's relative, it's interpreted relative to DockerMake.yml's directory
+  :
+    [source_image]:
+       [source path1]:[destination path1]
+       [source path2]:[destination path2]
+       [...]
+    [...]
+   
 
-[other image name]: ...
-[yet another image name]: ...
+[other image name]: [...]
+[...]
 ```
 
 
@@ -163,4 +193,4 @@ Help:
 
 Written by Aaron Virshup, Bio/Nano Research Group, Autodesk Research
 
-Copyright (c) 2016, Autodesk Inc. Released under the simplified BSD license.
+Copyright (c) 2015-2017, Autodesk Inc. Released under the Apache 2.0 License.
