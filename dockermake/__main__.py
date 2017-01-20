@@ -15,6 +15,7 @@
 """
 Multiple inheritance for your dockerfiles.
 """
+from __future__ import print_function
 import os
 
 from . import cli
@@ -47,7 +48,7 @@ def main():
 
     targets = utils.get_build_targets(args, defs)
     if not targets:
-        print 'No build targets specified!'
+        print('No build targets specified!')
         utils.list_image_defs(args, defs)
         return
 
@@ -55,14 +56,14 @@ def main():
     built, warnings = utils.build_targets(args, defs, targets)
 
     # Summarize the build process
-    print '\ndocker-make finished.'
-    print 'Built: '
+    print('\ndocker-make finished.')
+    print('Built: ')
     for item in built:
-        print ' *', item
+        print(' *', item)
     if warnings:
-        print 'Warnings:'
+        print('Warnings:')
         for item in warnings:
-            print ' *', item
+            print(' *', item)
 
 
 if __name__ == '__main__':

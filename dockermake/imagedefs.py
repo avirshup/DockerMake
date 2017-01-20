@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import os
 from collections import OrderedDict
 import yaml
@@ -31,7 +32,7 @@ class ImageDefs(object):
 
     def parse_yaml(self, filename):
         fname = os.path.expanduser(filename)
-        print 'READING %s' % os.path.expanduser(fname)
+        print('READING %s' % os.path.expanduser(fname))
         if fname in self._sources:
             raise ValueError('Circular _SOURCE_')
         self._sources.add(fname)
@@ -105,21 +106,27 @@ class ImageDefs(object):
     def get_external_base_image(self, image):
         """ Makes sure that this image has exactly one external base image
         """
-        base = None
-        base_for = None
-        for d in self.ymldefs[image]['requires']:
-            this_base = self.ymldefs[d].get('FROM', None)
-            if this_base is not None and base is not None and this_base != base:
-                error = ('Multiple external dependencies: image %s depends on:\n' % image +
-                         '  %s (FROM: %s), and\n' % (base_for, base) +
-                         '  %s (FROM: %s).' % (d, this_base))
+        externalbase = self.ymldefs[image].get('FROM', None)
+
+        for base in self.ymldefs[image].get('requires', []):
+            try:
+                otherexternal = self.get_external_base_image(base)
+            except ValueError:
+                continue
+
+            if externalbase is None:
+                externalbase = otherexternal
+            elif otherexternal is None:
+                continue
+            elif externalbase != otherexternal:
+                error = ('Multiple external dependencies: depends on:\n' % image +
+                         '  %s (FROM: %s), and\n' % (image, externalbase) +
+                         '  %s (FROM: %s).' % (base, otherexternal))
                 raise ValueError(error)
-            if this_base is not None:
-                base = this_base
-                base_for = d
-        if not base:
+
+        if not externalbase:
             raise ValueError("No base image found in %s's dependencies" % image)
-        return base
+        return externalbase
 
 
 def _fix_build_path(item, filepath):

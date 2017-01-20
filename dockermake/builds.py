@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import print_function
 
 import os
 from io import BytesIO, StringIO
@@ -42,7 +43,7 @@ class BuildStep(object):
         self.imagename = imagename
         self.baseimage = baseimage
         self.dockerfile_lines = ['FROM %s\n' % baseimage,
-                                 img_def['build']]
+                                 img_def.get('build', '')]
         self.buildname = buildname
         self.build_dir = img_def.get('build_directory', None)
 
@@ -57,8 +58,8 @@ class BuildStep(object):
             pull (bool): whether to pull dependent layers from remote repositories
             usecache (bool): whether to use cached layers or rebuild from scratch
         """
-        print '     * Build directory: %s' % self.build_dir
-        print '     * Intermediate image: %s' % self.buildname
+        print('     * Build directory: %s' % self.build_dir)
+        print('     * Intermediate image: %s' % self.buildname)
 
         dockerfile = '\n'.join(self.dockerfile_lines)
 
@@ -81,11 +82,11 @@ class BuildStep(object):
         # monitor the output
         for item in stream:
             if item.keys() == ['stream']:
-                print item['stream'].strip()
+                print(item['stream'].strip())
             elif 'errorDetail' in item or 'error' in item:
                 raise BuildError(dockerfile, item, build_args)
             else:
-                print item,
+                print(item, end=' ')
 
         # remove the temporary dockerfile
         if self.build_dir is not None:
@@ -98,7 +99,7 @@ class BuildStep(object):
         if not os.path.isdir(tempdir):
             os.makedirs(tempdir)
         with open(temp_df, 'w') as df_out:
-            print >> df_out, dockerfile
+            print(dockerfile, file=df_out)
         return tempdir
 
     def printfile(self):
@@ -107,7 +108,7 @@ class BuildStep(object):
         filename = 'docker_makefiles/Dockerfile.%s' % self.imagename
 
         with open(filename, 'w') as dfout:
-            print >> dfout, '\n'.join(self.dockerfile_lines)
+            print('\n'.join(self.dockerfile_lines), file=dfout)
 
 
 class BuildTarget(object):
@@ -137,14 +138,14 @@ class BuildTarget(object):
             nobuild (bool): just create dockerfiles, don't actually build the image
             keepbuildtags (bool): keep tags on intermediate images
         """
-        print 'docker-make starting build for "%s" (image definition "%s"' % (
-            self.targetname, self.imagename)
+        print('docker-make starting build for "%s" (image definition "%s"'%(
+            self.targetname, self.imagename))
         for istep, step in enumerate(self.steps):
-            print '  **** Building %s, Step %d/%d: "%s" requirement ***' % (
+            print('  **** Building %s, Step %d/%d: "%s" requirement ***'%(
                 self.imagename,
                 istep + 1,
                 len(self.steps),
-                step.imagename)
+                step.imagename))
 
             if printdockerfiles:
                 step.printfile()
@@ -161,22 +162,22 @@ class BuildTarget(object):
         """ Tag the built image with its final name and untag intermediate containers
         """
         client.tag(finalimage, *self.targetname.split(':'))
-        print 'Tagged final image as %s\n' % self.targetname
+        print('Tagged final image as %s\n' % self.targetname)
         if not keepbuildtags:
             for step in self.steps:
                 client.remove_image(step.buildname, force=True)
-                print 'Untagged intermediate container "%s"' % step.buildname
+                print('Untagged intermediate container "%s"' % step.buildname)
 
 
 class BuildError(Exception):
     def __init__(self, dockerfile, item, build_args):
         with open('dockerfile.fail', 'w') as dff:
-            print>> dff, dockerfile
+            print(dockerfile, file=dff)
         with BytesIO() as stream:
-            print >> stream, '\n   -------- Docker daemon output --------'
+            print('\n   -------- Docker daemon output --------', file=stream)
             pprint.pprint(item, stream, indent=4)
-            print >> stream, '   -------- Arguments to client.build --------'
+            print('   -------- Arguments to client.build --------', file=stream)
             pprint.pprint(build_args, stream, indent=4)
-            print >> stream, 'This dockerfile was written to dockerfile.fail'
+            print('This dockerfile was written to dockerfile.fail', file=stream)
             stream.seek(0)
             super(BuildError, self).__init__(stream.read())

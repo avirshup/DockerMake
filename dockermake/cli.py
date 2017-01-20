@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Copyright 2015-2017 Autodesk Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,10 +74,10 @@ def make_arg_parser():
 
 
 def print_yaml_help():
-    print "A brief introduction to writing Dockerfile.yml files:\n"
+    print("A brief introduction to writing Dockerfile.yml files:\n")
 
-    print 'SYNTAX:'
-    print printable_code("""[image_name]:
+    print('SYNTAX:')
+    print(printable_code("""[image_name]:
   build_directory: [relative path where the ADD and COPY commands will look for files]
   requires:
    - [other image name]
@@ -88,19 +89,19 @@ def print_yaml_help():
    [Dockerfile commands go here]
 
 [other image name]: ...
-[yet another image name]: ...""")
+[yet another image name]: ..."""))
 
-    print
-    print textwrap.fill("The idea is to write dockerfile commands for each specific "
+    print()
+    print(textwrap.fill("The idea is to write dockerfile commands for each specific "
                         'piece of functionality in the build field, and "inherit" all other'
                         ' functionality from a list of other components that your image requires. '
                         'If you need to add files with the ADD and COPY commands, specify the root'
                         ' directory for those files with build_directory. Your tree of '
                         '"requires" must have exactly one unique named base image '
-                        'in the FROM field.')
+                        'in the FROM field.'))
 
-    print '\n\nAN EXAMPLE:'
-    print printable_code("""devbase:
+    print('\n\nAN EXAMPLE:')
+    print(printable_code("""devbase:
  FROM: phusion/baseimage
  build: |
   RUN apt-get -y update && apt-get -y install build-essential
@@ -123,7 +124,7 @@ python_image:
 data_science:
  requires:
   - python_image
-  - airline_data""")
+  - airline_data"""))
 
 
 def printable_code(c):

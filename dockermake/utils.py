@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Copyright 2015-2017 Autodesk Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,17 +24,22 @@ def get_client():
 
 
 def list_image_defs(args, defs):
-    print 'TARGETS in `%s`' % args.makefile
+    print('TARGETS in `%s`' % args.makefile)
     for item in defs.ymldefs.keys():
-        print ' *', item
+        print(' *', item)
     return
 
 
 def generate_name(image, args):
-    repo_base = args.repository if args.repository is not None else ''
-    if repo_base[-1] not in ':/':
-        repo_base += '/'
-    repo_name = repo_base + image
+    repo_base = args.repository
+
+    if repo_base is not None:
+        if repo_base[-1] not in ':/':
+            repo_base += '/'
+        repo_name = repo_base + image
+    else:
+        repo_name = image
+
     if args.tag:
         if ':' in repo_name:
             repo_name += '-'+args.tag
@@ -75,7 +81,7 @@ def build_targets(args, defs, targets):
         b.build(client,
                 printdockerfiles=args.print_dockerfiles,
                 nobuild=args.no_build)
-        print '  docker-make built:', b.targetname
+        print('  docker-make built:', b.targetname)
         built.append(b.targetname)
         if args.push_to_registry:
             success, w = push(client, b.targetname)
@@ -95,22 +101,22 @@ def push(client, name):
         warn = 'WARNING: could not push %s - ' \
                'repository name does not contain a registry URL' % name
         warnings.append(warn)
-        print warn
+        print(warn)
     else:
-        print '  Pushing %s to %s:' % (name, name.split('/')[0])
+        print('  Pushing %s to %s:' % (name, name.split('/')[0]))
         line = {'error': 'no push information received'}
         _lastid = None
         for line in client.push(name, stream=True):
             line = yaml.load(line)
             if 'status' in line:
                 if line.get('id', None) == _lastid and line['status'] == 'Pushing':
-                    print '\r', line['status'], line['id'], line.get('progress', ''),
+                    print('\r', line['status'], line['id'], line.get('progress', ''), end=' ')
                     sys.stdout.flush()
                 else:
-                    print line['status'], line.get('id', '')
+                    print(line['status'], line.get('id', ''))
                     _lastid = line.get('id', None)
             else:
-                print line
+                print(line)
         if 'error' in line:
             warnings.append('WARNING: push failed for %s. Message: %s' % (name, line['error']))
         else:
