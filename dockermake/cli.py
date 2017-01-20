@@ -67,6 +67,8 @@ def make_arg_parser():
                          'use index.docker.io as the registry)')
 
     hh = parser.add_argument_group('Help')
+    hh.add_argument('--version', action='store_true',
+                    help="Print version and exit.")
     hh.add_argument('--help-yaml', action='store_true',
                     help="Print summary of YAML file format and exit.")
 

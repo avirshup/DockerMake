@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import print_function
+from builtins import str
+from builtins import object
 
 import os
 from io import BytesIO, StringIO
@@ -72,7 +74,7 @@ class BuildStep(object):
                               path=os.path.abspath(os.path.expanduser(self.build_dir)),
                               dockerfile=os.path.join(DOCKER_TMPDIR, 'Dockerfile'))
         else:
-            build_args.update(fileobj=StringIO(unicode(dockerfile)),
+            build_args.update(fileobj=StringIO(str(dockerfile)),
                               path=None,
                               dockerfile=None)
 
@@ -81,7 +83,7 @@ class BuildStep(object):
 
         # monitor the output
         for item in stream:
-            if item.keys() == ['stream']:
+            if list(item.keys()) == ['stream']:
                 print(item['stream'].strip())
             elif 'errorDetail' in item or 'error' in item:
                 raise BuildError(dockerfile, item, build_args)

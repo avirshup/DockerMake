@@ -25,7 +25,7 @@ def get_client():
 
 def list_image_defs(args, defs):
     print('TARGETS in `%s`' % args.makefile)
-    for item in defs.ymldefs.keys():
+    for item in list(defs.ymldefs.keys()):
         print(' *', item)
     return
 
@@ -62,7 +62,7 @@ def get_build_targets(args, defs):
         if defs.all_targets is not None:
             targets = defs.all_targets
         else:
-            targets = defs.ymldefs.keys()
+            targets = list(defs.ymldefs.keys())
     else:
         # build the user-specified targets
         targets = args.TARGETS

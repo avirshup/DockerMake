@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 # Copyright 2015-2017 Autodesk Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +27,12 @@ def main():
 
     parser = cli.make_arg_parser()
     args = parser.parse_args()
+
+    # print version and exit
+    if args.version:
+        from . import __version__
+        print('docker-make version %s' % __version__)
+        return
 
     # Print help and exit
     if args.help_yaml:

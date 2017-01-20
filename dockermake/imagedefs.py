@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from __future__ import print_function
+from builtins import object
 import os
 from collections import OrderedDict
 import yaml
@@ -41,7 +42,7 @@ class ImageDefs(object):
             yamldefs = yaml.load(yaml_file)
 
         # Interpret build directory paths relative to this DockerMake.yml file
-        for item in yamldefs.itervalues():
+        for item in yamldefs.values():
             _fix_build_path(item, os.path.dirname(fname))
 
         sourcedefs = {}
