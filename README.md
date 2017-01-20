@@ -109,7 +109,7 @@ The idea is to write dockerfile commands for each specific piece of functionalit
   build_directory: [path where the ADD and COPY commands will look for files]
     # note that the "build_directory" path can be relative or absolute.
     # if it's relative, it's interpreted relative to DockerMake.yml's directory
-  :
+  built_files:
     [source_image]:
        [source path1]:[destination path1]
        [source path2]:[destination path2]

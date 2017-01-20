@@ -20,6 +20,8 @@ from io import BytesIO, StringIO
 from builtins import object
 from builtins import str
 
+from . import staging
+
 DOCKER_TMPDIR = '_docker_make_tmp/'
 
 
@@ -40,6 +42,7 @@ class BuildStep(object):
                                  img_def.get('build', '')]
         self.buildname = buildname
         self.build_dir = img_def.get('build_directory', None)
+        self.requirement_name = '"%s" image layer' % self.imagename
 
     def build(self, client, pull=False, usecache=True):
         """
@@ -105,6 +108,21 @@ class BuildStep(object):
             print('\n'.join(self.dockerfile_lines), file=dfout)
 
 
+class FileCopyStep(BuildStep):
+    def __init__(self, sourceimage, sourcepath, base_image, destpath, buildname):
+        self.sourceimage = sourceimage
+        self.sourcepath = sourcepath
+        self.base_image = base_image
+        self.destpath = destpath
+        self.buildname = buildname
+
+        self.requirement_name = 'file copy from %s://%s' % (self.sourceimage, self.sourcepath)
+
+    def build(self, client, pull=False, usecache=True):
+        stage = staging.StagedFile(self.sourceimage, self.sourcepath, self.destpath)
+        stage.stage(self.base_image, self.buildname)
+
+
 class BuildTarget(object):
     """ Represents a target docker image.
 
@@ -135,11 +153,11 @@ class BuildTarget(object):
         print('docker-make starting build for "%s" (image definition "%s"'%(
             self.targetname, self.imagename))
         for istep, step in enumerate(self.steps):
-            print('  **** Building %s, Step %d/%d: "%s" requirement ***'%(
+            print('  **** Building %s, Step %d/%d: %s ***'%(
                 self.imagename,
-                istep + 1,
+                istep+1,
                 len(self.steps),
-                step.imagename))
+                step.requirement_name))
 
             if printdockerfiles:
                 step.printfile()

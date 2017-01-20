@@ -48,12 +48,13 @@ class StagedFile(object):
             newimage (str): name of the created image
         """
         client = utils.get_client()
-        print('\nCopying %s://%s -> %s://%s ...' % (self.sourceimage, self.sourcepath,
-                                                    startimage, self.destpath))
+        print('\nCopying %s://%s -> %s://%s/ ...'%(self.sourceimage, self.sourcepath,
+                                                     startimage, self.destpath))
 
         # copy build artifacts from the container if necessary
         cachedir = self._setcache(client)
         if not os.path.exists(cachedir):
+            print('Creating cache at %s' % cachedir)
             container = client.containers.create(self.sourceimage)
             tarfile_stream, tarfile_stats = container.get_archive(self.sourcepath)
 
@@ -64,6 +65,9 @@ class StagedFile(object):
                     localfile.write(chunk)
             os.mkdir(cachedir)
             os.rename(tempdir, cachedir)
+        else:
+            print('Using cached files from %s' % cachedir)
+
 
         # write Dockerfile for the new image and then build it
         with open(os.path.join(cachedir, 'Dockerfile'), 'w') as df:
@@ -95,23 +99,3 @@ class StagedFile(object):
         else:  # make sure image ID hasn't changed
             assert self._sourceobj.id == client.images.get(self.sourceimage)
             return self._cachedir
-
-
-
-
-
-
-
-### failed attempt to deal with these tarfiles as streams:
-# dftext = bytes('FROM %s\nADD . %s' % (startimage, self.destpath))
-# dftarinfo = tarfile.TarInfo('./Dockerfile')
-# dftarinfo.size = len(dftext)
-# dfstream = io.BytesIO(dftext)
-# tarfile_stream, tarfile_stats = container.get_archive(self.sourcepath)
-# tarinfo = tarfile.TarInfo()
-# tarinfo.size = tarfile_stats['size']
-# print(tarfile_stats)
-# #tfread = tarfile.open(fileobj=tarfile_stream, mode='r|*')
-# tfwrite = tarfile.open(fileobj=io.BytesIO, mode='w|')
-# tfwrite.addfile(tarinfo, fileobj=tarfile_stream)
-# tfwrite.addfile(dftarinfo, fileobj=dfstream)

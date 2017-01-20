@@ -65,13 +65,24 @@ class ImageDefs(object):
         """
         base_image = self.get_external_base_image(image)
         build_steps = []
-        for i, base_name in enumerate(self.sort_dependencies(image)):
-            buildname = 'dmkbuild_%s_%d' % (image, i+1)
+        istep = 0
+        for base_name in self.sort_dependencies(image):
+            istep += 1
+            buildname = 'dmkbuild_%s_%d' % (image, istep)
             build_steps.append(builds.BuildStep(base_name,
                                                 base_image,
                                                 self.ymldefs[base_name],
                                                 buildname))
             base_image = buildname
+
+        for sourceimage, files in self.ymldefs[image].get('built_files', {}).iteritems():
+            for sourcepath, destpath in files.iteritems():
+                istep += 1
+                buildname = 'dmkbuild_%s_%d' % (image, istep)
+                build_steps.append(builds.FileCopyStep(sourceimage, sourcepath,
+                                                       base_image, destpath,
+                                                       buildname))
+                base_image = buildname
 
         return builds.BuildTarget(imagename=image,
                                   targetname=targetname,
