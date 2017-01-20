@@ -16,6 +16,7 @@
 Multiple inheritance for your dockerfiles.
 Requires: python 2.7, docker-py, pyyaml (RUN: easy_install pip; pip install docker-py pyyaml)
 """
+import json
 import sys
 import os
 import textwrap
@@ -44,7 +45,8 @@ class DockerMaker(object):
         # Connect to docker daemon if necessary
         if build_images:
             connection = docker.utils.kwargs_from_env()
-            connection['tls'].assert_hostname = False
+            if 'tls' in connection:
+                connection['tls'].assert_hostname = False
             self.client = docker.Client(**connection)
         else:
             self.client = None
@@ -72,7 +74,10 @@ class DockerMaker(object):
 
         sourcedefs = {}
         for s in yamldefs.get('_SOURCES_', []):
-            sourcedefs.update(self.parse_yaml(s))
+            src = self.parse_yaml(s)
+            for item in src.itervalues():
+                _fix_build_path(item, os.path.dirname(s))
+            sourcedefs.update(src)
 
         sourcedefs.update(yamldefs)
         return sourcedefs
@@ -120,8 +125,8 @@ class DockerMaker(object):
                           nocache=self.no_cache)
         if step.build_dir is not None:
             tempname = '_docker_make_tmp/'
-            tempdir = '%s/%s' % (step.build_dir, tempname)
-            temp_df = tempdir + 'Dockerfile'
+            tempdir = os.path.abspath(os.path.join(step.build_dir, tempname))
+            temp_df = os.path.join(tempdir, 'Dockerfile')
             if not os.path.isdir(tempdir):
                 os.makedirs(tempdir)
             with open(temp_df, 'w') as df_out:
@@ -132,17 +137,27 @@ class DockerMaker(object):
         else:
             build_args['fileobj'] = StringIO(unicode(dockerfile))
 
+        # TODO: remove this workaround for docker/docker-py#1134 -- AMV 7/19/16
+        build_args['decode'] = False
+
         # start the build
         stream = self.client.build(**build_args)
 
         # monitor the output
         for item in stream:
+            # TODO: this is more workaround for docker/docker-py#1134
+            try:
+                item = json.loads(item)
+            except ValueError:
+                print item,
+                continue
+            #### end of workaround - this can be removed once resolved - AMV 7/19/16
             if item.keys() == ['stream']:
                 print item['stream'].strip()
             elif 'errorDetail' in item or 'error' in item:
                 raise BuildError(dockerfile, item, build_args)
             else:
-                print item
+                print item,
 
         # remove the temporary dockerfile
         if step.build_dir is not None:
@@ -408,6 +423,20 @@ def printable_code(c):
     return '\n'.join(output)
 
 
+def _fix_build_path(item, filepath):
+    path = os.path.expanduser(filepath)
+
+    if 'build_directory' not in item:
+        return
+
+    elif os.path.isabs(item['build_directory']):
+        return
+
+    else:
+        item['build_directory'] = os.path.join(os.path.abspath(path),
+                                               item['build_directory'])
+
+
 def make_arg_parser():
     parser = argparse.ArgumentParser(description=
                                      "NOTE: Docker environmental variables must be set.\n"
@@ -488,4 +517,5 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
-if __name__ == '__main__': main()
+if __name__ == '__main__':
+    main()
