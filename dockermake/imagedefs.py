@@ -26,7 +26,8 @@ class ImageDefs(object):
     def __init__(self, makefile_path):
         self._sources = set()
         self.makefile_path = makefile_path
-        self.defs = self.parse_yaml(self.makefile_path)
+        self.ymldefs = self.parse_yaml(self.makefile_path)
+        self.all_targets = self.ymldefs.pop('_ALL_', None)
 
     def parse_yaml(self, filename):
         fname = os.path.expanduser(filename)
@@ -65,7 +66,7 @@ class ImageDefs(object):
             buildname = 'dmkbuild_%s_%d' % (image, i+1)
             build_steps.append(builds.BuildStep(base_name,
                                                 base_image,
-                                                self.defs[base_name],
+                                                self.ymldefs[base_name],
                                                 buildname))
             base_image = buildname
 
@@ -91,7 +92,7 @@ class ImageDefs(object):
         if image in dependencies:
             return
 
-        requires = self.defs[image].get('requires', [])
+        requires = self.ymldefs[image].get('requires', [])
         assert type(requires) == list, 'Requirements for %s are not a list' % image
 
         for dep in requires:
@@ -106,8 +107,8 @@ class ImageDefs(object):
         """
         base = None
         base_for = None
-        for d in self.defs[image]['requires']:
-            this_base = self.defs[d].get('FROM', None)
+        for d in self.ymldefs[image]['requires']:
+            this_base = self.ymldefs[d].get('FROM', None)
             if this_base is not None and base is not None and this_base != base:
                 error = ('Multiple external dependencies: image %s depends on:\n' % image +
                          '  %s (FROM: %s), and\n' % (base_for, base) +

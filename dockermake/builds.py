@@ -58,7 +58,7 @@ class BuildStep(object):
             usecache (bool): whether to use cached layers or rebuild from scratch
         """
         print '     * Build directory: %s' % self.build_dir
-        print '     * Target image name: %s' % self.buildname
+        print '     * Intermediate image: %s' % self.buildname
 
         dockerfile = '\n'.join(self.dockerfile_lines)
 
@@ -140,8 +140,11 @@ class BuildTarget(object):
         print 'docker-make starting build for "%s" (image definition "%s"' % (
             self.targetname, self.imagename)
         for istep, step in enumerate(self.steps):
-            print '  **** DockerMake Step %d/%d: %s ***' % (
-                istep + 1, len(self.steps), step.imagename)
+            print '  **** Building %s, Step %d/%d: "%s" requirement ***' % (
+                self.imagename,
+                istep + 1,
+                len(self.steps),
+                step.imagename)
 
             if printdockerfiles:
                 step.printfile()
@@ -157,7 +160,7 @@ class BuildTarget(object):
     def finalizenames(self, client, finalimage, keepbuildtags):
         """ Tag the built image with its final name and untag intermediate containers
         """
-        client.tag(finalimage, self.targetname)
+        client.tag(finalimage, *self.targetname.split(':'))
         print 'Tagged final image as %s\n' % self.targetname
         if not keepbuildtags:
             for step in self.steps:
