@@ -13,14 +13,22 @@ from __future__ import print_function
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import docker
+
+_dockerclient = None
+
+
+def get_client_api():
+    return get_client().api
+
 
 def get_client():
-    import docker.utils
+    global _dockerclient
 
-    connection = docker.utils.kwargs_from_env()
-    if 'tls' in connection:
-        connection['tls'].assert_hostname = False
-    return docker.Client(**connection)
+    if _dockerclient is None:
+        _dockerclient = docker.from_env()
+
+    return _dockerclient
 
 
 def list_image_defs(args, defs):
@@ -74,7 +82,7 @@ def build_targets(args, defs, targets):
     if args.no_build:
         client = None
     else:
-        client = get_client()
+        client = get_client_api()
     built, warnings = [], []
     builders = [defs.generate_build(t, generate_name(t, args)) for t in targets]
     for b in builders:

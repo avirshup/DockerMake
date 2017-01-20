@@ -12,23 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import print_function
-from builtins import str
-from builtins import object
 
 import os
-from io import BytesIO, StringIO
 import pprint
+from io import BytesIO, StringIO
+
+from builtins import object
+from builtins import str
 
 DOCKER_TMPDIR = '_docker_make_tmp/'
-
-
-class StagedFile(object):
-    """ Tracks a file or directory that will be built in one container then copied into another
-    """
-    def __init__(self, sourceimage, sourcepath, destpath):
-        self.sourceimage = sourceimage
-        self.sourcepath = sourcepath
-        self.destpath = destpath
 
 
 class BuildStep(object):
@@ -56,7 +48,7 @@ class BuildStep(object):
         step.
 
         Args:
-            client (docker.Client): docker client object that will build the image
+            client (docker.APIClient): docker client object that will build the image
             pull (bool): whether to pull dependent layers from remote repositories
             usecache (bool): whether to use cached layers or rebuild from scratch
         """
@@ -135,7 +127,7 @@ class BuildTarget(object):
         Drives the build of the final image - get the list of steps and execute them.
 
         Args:
-            client (docker.Client): docker client object that will build the image
+            client (docker.APIClient): docker client object that will build the image
             printdockerfiles (bool): create the dockerfile for this build
             nobuild (bool): just create dockerfiles, don't actually build the image
             keepbuildtags (bool): keep tags on intermediate images

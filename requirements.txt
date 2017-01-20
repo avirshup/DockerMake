@@ -1,2 +1,2 @@
-docker-py
+docker
 pyyaml
