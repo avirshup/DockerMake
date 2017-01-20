@@ -24,6 +24,8 @@ from . import staging
 
 DOCKER_TMPDIR = '_docker_make_tmp/'
 
+_updated_staging_images = set()
+
 
 class BuildStep(object):
     """ Stores and runs the instructions to build a single image.
@@ -133,10 +135,10 @@ class BuildTarget(object):
         stagedfiles (List[StagedFile]): list of files to stage into this image from other images
 
     """
-    def __init__(self, imagename, targetname, steps, stagedfiles):
+    def __init__(self, imagename, targetname, steps, sourcebuilds):
         self.imagename = imagename
         self.steps = steps
-        self.stagedfiles = stagedfiles
+        self.sourcebuilds = sourcebuilds
         self.targetname = targetname
 
     def build(self, client,
@@ -150,15 +152,16 @@ class BuildTarget(object):
             nobuild (bool): just create dockerfiles, don't actually build the image
             keepbuildtags (bool): keep tags on intermediate images
         """
+        if not nobuild:
+            self.update_source_images(client)
+
         print('docker-make starting build for "%s" (image definition "%s"'%(
             self.targetname, self.imagename))
         for istep, step in enumerate(self.steps):
-            print('  **** Building %s, Step %d/%d: %s ***'%(
-                self.imagename,
-                istep+1,
-                len(self.steps),
-                step.requirement_name))
-
+            print('  **** Building %s, Step %d/%d: %s ***' % (self.imagename,
+                                                              istep+1,
+                                                              len(self.steps),
+                                                              step.requirement_name))
             if printdockerfiles:
                 step.printfile()
 
@@ -169,6 +172,13 @@ class BuildTarget(object):
 
         if not nobuild:
             self.finalizenames(client, finalimage, keepbuildtags)
+
+    def update_source_images(self, client):
+        for build in self.sourcebuilds:
+            if build.targetname in _updated_staging_images:
+                continue
+            print('\n\nUpdating source image %s' % build.targetname)
+            build.build(client)
 
     def finalizenames(self, client, finalimage, keepbuildtags):
         """ Tag the built image with its final name and untag intermediate containers

@@ -75,7 +75,9 @@ class ImageDefs(object):
                                                 buildname))
             base_image = buildname
 
+        sourceimages = set()
         for sourceimage, files in self.ymldefs[image].get('built_files', {}).iteritems():
+            sourceimages.add(sourceimage)
             for sourcepath, destpath in files.iteritems():
                 istep += 1
                 buildname = 'dmkbuild_%s_%d' % (image, istep)
@@ -84,10 +86,13 @@ class ImageDefs(object):
                                                        buildname))
                 base_image = buildname
 
+        sourcebuilds = [self.generate_build(image, image) for image in sourceimages]
+
+
         return builds.BuildTarget(imagename=image,
                                   targetname=targetname,
                                   steps=build_steps,
-                                  stagedfiles=[])  # TODO: this.
+                                  sourcebuilds=sourcebuilds)
 
     def sort_dependencies(self, image, dependencies=None):
         """

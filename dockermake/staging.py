@@ -68,7 +68,6 @@ class StagedFile(object):
         else:
             print('Using cached files from %s' % cachedir)
 
-
         # write Dockerfile for the new image and then build it
         with open(os.path.join(cachedir, 'Dockerfile'), 'w') as df:
             df.write('FROM %s\nADD content.tar %s' % (startimage, self.destpath))
