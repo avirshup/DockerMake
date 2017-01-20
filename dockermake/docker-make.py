@@ -20,10 +20,8 @@ import json
 import sys
 import os
 import textwrap
-from collections import OrderedDict
-from io import StringIO, BytesIO
+from io import StringIO
 import argparse
-import pprint
 
 import docker, docker.utils
 import yaml
@@ -39,7 +37,6 @@ class DockerMaker(object):
 
         self._sources = set()
         self.makefile_path = makefile
-        self.img_defs = self.parse_yaml(self.makefile_path)
         self.all_targets = self.img_defs.pop('_ALL_', None)
 
         # Connect to docker daemon if necessary
@@ -62,25 +59,6 @@ class DockerMaker(object):
         self.print_dockerfiles = print_dockerfiles
         self.pull = pull
         self.no_cache = no_cache
-
-    def parse_yaml(self, filename):
-        fname = os.path.expanduser(filename)
-        print 'READING %s' % os.path.expanduser(fname)
-        if fname in self._sources: raise ValueError('Circular _SOURCE_')
-        self._sources.add(fname)
-
-        with open(fname, 'r') as yaml_file:
-            yamldefs = yaml.load(yaml_file)
-
-        sourcedefs = {}
-        for s in yamldefs.get('_SOURCES_', []):
-            src = self.parse_yaml(s)
-            for item in src.itervalues():
-                _fix_build_path(item, os.path.dirname(s))
-            sourcedefs.update(src)
-
-        sourcedefs.update(yamldefs)
-        return sourcedefs
 
     def build(self, image):
         """
@@ -164,110 +142,9 @@ class DockerMaker(object):
             os.unlink(temp_df)
             os.rmdir(tempdir)
 
-    def generate_build_order(self, image):
-        """
-        Separate the build into a series of one or more intermediate steps.
-        Each specified build directory gets its own step
-        """
-        repo_name = self.repo + image
-        if self.tag:
-            if ':' in repo_name:
-                repo_name += '-' + self.tag
-            else:
-                repo_name += ':' + self.tag
-        dependencies = self.sort_dependencies(image)
-        base = self.get_external_base_image(image, dependencies)
-
-        build_steps = [BuildStep(base)]
-        step = build_steps[0]
-        for d in dependencies:
-            dep_definition = self.img_defs[d]
-            mydir = dep_definition.get('build_directory', None)
-            if mydir is not None:
-                mydir = os.path.expanduser(mydir)  # expands `~` to home directory
-                if step.build_dir is not None:
-                    # Create a new build step if there's already a build directory
-                    step.tag = '%dbuild_%s' % (len(build_steps), image)
-                    build_steps.append(BuildStep(step.tag))
-                    step = build_steps[-1]
-                step.build_dir = mydir
-
-            step.images.append(d)
-            if 'build' in dep_definition:
-                step.dockerfile.append('\n#Commands for %s' % d)
-                step.dockerfile.append(dep_definition['build'])
-            else:
-                step.dockerfile.append('\n####end of requirements for %s\n' % d)
-
-        # Sets the last step's name to the final build target
-        step.tag = repo_name
-        for step in build_steps:
-            step.dockerfile.insert(0, '#Build directory: %s\n#tag: %s' %
-                                   (step.build_dir, step.tag))
-        return build_steps
-
-    def sort_dependencies(self, com, dependencies=None):
-        """
-        Topologically sort the docker commands by their requirements
-        TODO: sort using a "maximum common tree"?
-        :param com: process this docker image's dependencies
-        :param dependencies: running cache of sorted dependencies (ordered dict)
-        :return type: OrderedDict
-        """
-        if dependencies is None: dependencies = OrderedDict()
-
-        if com in dependencies: return
-        requires = self.img_defs[com].get('requires', [])
-        assert type(requires) == list, 'Requirements for %s are not a list' % com
-
-        for dep in requires:
-            self.sort_dependencies(dep, dependencies)
-        if com in dependencies:
-            raise ValueError('Circular dependency found', dependencies)
-        dependencies[com] = None
-        return dependencies
-
-    def get_external_base_image(self, image, dependencies):
-        """
-        Makes sure that this image has exactly one external base image
-        """
-        base = None
-        base_for = None
-        for d in dependencies:
-            this_base = self.img_defs[d].get('FROM', None)
-            if this_base is not None and base is not None and this_base != base:
-                error = ('Multiple external dependencies: image %s depends on:\n' % image +
-                         '  %s (FROM: %s), and\n' % (base_for, base) +
-                         '  %s (FROM: %s).' % (d, this_base))
-                raise ValueError(error)
-            if this_base is not None:
-                base = this_base
-                base_for = d
-        if base is None:
-            raise ValueError("No base image found in %s's dependencies" % image)
-        return base
 
 
-class BuildError(Exception):
-    def __init__(self, dockerfile, item, build_args):
-        with open('dockerfile.fail', 'w') as dff:
-            print>> dff, dockerfile
-        with BytesIO() as stream:
-            print >> stream, '\n   -------- Docker daemon output --------'
-            pprint.pprint(item, stream, indent=4)
-            print >> stream, '   -------- Arguments to client.build --------'
-            pprint.pprint(build_args, stream, indent=4)
-            print >> stream, 'This dockerfile was written to dockerfile.fail'
-            stream.seek(0)
-            super(BuildError, self).__init__(stream.read())
 
-
-class BuildStep(object):
-    def __init__(self, baseimage):
-        self.dockerfile = ['FROM %s\n' % baseimage]
-        self.tag = None
-        self.build_dir = None
-        self.images = []
 
 
 def main():
@@ -421,20 +298,6 @@ def printable_code(c):
     for line in dedented.split('\n'):
         output.append(' >> ' + line)
     return '\n'.join(output)
-
-
-def _fix_build_path(item, filepath):
-    path = os.path.expanduser(filepath)
-
-    if 'build_directory' not in item:
-        return
-
-    elif os.path.isabs(item['build_directory']):
-        return
-
-    else:
-        item['build_directory'] = os.path.join(os.path.abspath(path),
-                                               item['build_directory'])
 
 
 def make_arg_parser():

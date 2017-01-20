@@ -1,9 +1,9 @@
 data_image:
- FROM: phusion/baseimage
+ FROM: debian:jessie
  build: RUN mkdir /data
 
 devbase:
- FROM: phusion/baseimage
+ FROM: debian:jessie
  build: |
   RUN apt-get -y update && apt-get -y install \
       build-essential \

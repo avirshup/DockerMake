@@ -1,2 +1,2 @@
 include versioneer.py
-include docker-make/_version.py
+include dockermake/_version.py
