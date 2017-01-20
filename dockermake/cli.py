@@ -14,6 +14,64 @@
 import argparse
 import textwrap
 
+
+def make_arg_parser():
+    parser = argparse.ArgumentParser(description=
+                                     "NOTE: Docker environmental variables must be set.\n"
+                                     "For a docker-machine, run "
+                                     "`eval $(docker-machine env [machine-name])`")
+    bo = parser.add_argument_group('Choosing what to build')
+    bo.add_argument('TARGETS', nargs="*",
+                    help='Docker images to build as specified in the YAML file')
+    bo.add_argument('-f', '--makefile',
+                    default='DockerMake.yml',
+                    help='YAML file containing build instructions')
+    bo.add_argument('-a', '--all', action='store_true',
+                    help="Print or build all images (or those specified by _ALL_)")
+    bo.add_argument('-l', '--list', action='store_true',
+                    help='List all available targets in the file, then exit.')
+    bo.add_argument('--requires', nargs="*",
+                    help='Build a special image from these requirements. Requires --name')
+    bo.add_argument('--name', type=str,
+                    help="Name for custom docker images (requires --requires)")
+
+    df = parser.add_argument_group('Dockerfiles')
+    df.add_argument('-p', '--print_dockerfiles', action='store_true',
+                    help="Print out the generated dockerfiles named `Dockerfile.[image]`")
+    df.add_argument('-n', '--no_build', action='store_true',
+                    help='Only print Dockerfiles, don\'t build them. Implies --print.')
+
+    ca = parser.add_argument_group('Image caching')
+    ca.add_argument('--pull', action='store_true',
+                    help='Always try to pull updated FROM images')
+    ca.add_argument('--no-cache', action='store_true',
+                    help="Rebuild every layer")
+    # TODO: add a way to invalidate a specific target
+
+    rt = parser.add_argument_group('Repositories and tags')
+    rt.add_argument('--repository', '-r', '-u',
+                    help="Prepend this repository to all built images, e.g.\n"
+                         "`docker-make hello-world -u quay.io/elvis` will tag the image "
+                         "as `quay.io/elvis/hello-world`. You can add a ':' to the end to "
+                         "image names into tags:\n `docker-make -u quay.io/elvis/repo: hello-world` "
+                         "will create the image in the elvis repository: quay.io/elvis/repo:hello-world")
+    rt.add_argument('--tag', '-t', type=str,
+                    help='Tag all built images with this tag. If image names are ALREADY tags (i.e.,'
+                         ' your repo name ends in a ":"), this will append the tag name with a dash. '
+                         'For example: `docker-make hello-world -u elvis/repo: -t 1.0` will create '
+                         'the image "elvis/repo:hello-world-1.0')
+    rt.add_argument('--push-to-registry', '-P', action='store_true',
+                    help='Push all built images to the repository specified '
+                         '(only if image repository contains a URL) -- to push to dockerhub.com, '
+                         'use index.docker.io as the registry)')
+
+    hh = parser.add_argument_group('Help')
+    hh.add_argument('--help-yaml', action='store_true',
+                    help="Print summary of YAML file format and exit.")
+
+    return parser
+
+
 def print_yaml_help():
     print "A brief introduction to writing Dockerfile.yml files:\n"
 
@@ -75,59 +133,3 @@ def printable_code(c):
         output.append(' >> ' + line)
     return '\n'.join(output)
 
-
-def make_arg_parser():
-    parser = argparse.ArgumentParser(description=
-                                     "NOTE: Docker environmental variables must be set.\n"
-                                     "For a docker-machine, run "
-                                     "`eval $(docker-machine env [machine-name])`")
-    bo = parser.add_argument_group('Choosing what to build')
-    bo.add_argument('TARGETS', nargs="*",
-                    help='Docker images to build as specified in the YAML file')
-    bo.add_argument('-f', '--makefile',
-                    default='DockerMake.yml',
-                    help='YAML file containing build instructions')
-    bo.add_argument('-a', '--all', action='store_true',
-                    help="Print or build all images (or those specified by _ALL_)")
-    bo.add_argument('-l', '--list', action='store_true',
-                    help='List all available targets in the file, then exit.')
-    bo.add_argument('--requires', nargs="*",
-                    help='Build a special image from these requirements. Requires --name')
-    bo.add_argument('--name', type=str,
-                    help="Name for custom docker images (requires --requires)")
-
-    df = parser.add_argument_group('Dockerfiles')
-    df.add_argument('-p', '--print_dockerfiles', action='store_true',
-                    help="Print out the generated dockerfiles named `Dockerfile.[image]`")
-    df.add_argument('-n', '--no_build', action='store_true',
-                    help='Only print Dockerfiles, don\'t build them. Implies --print.')
-
-    ca = parser.add_argument_group('Image caching')
-    ca.add_argument('--pull', action='store_true',
-                    help='Always try to pull updated FROM images')
-    ca.add_argument('--no-cache', action='store_true',
-                    help="Rebuild every layer")
-    # TODO: add a way to invalidate a specific target
-
-    rt = parser.add_argument_group('Repositories and tags')
-    rt.add_argument('--repository', '-r', '-u',
-                    help="Prepend this repository to all built images, e.g.\n"
-                         "`docker-make hello-world -u quay.io/elvis` will tag the image "
-                         "as `quay.io/elvis/hello-world`. You can add a ':' to the end to "
-                         "image names into tags:\n `docker-make -u quay.io/elvis/repo: hello-world` "
-                         "will create the image in the elvis repository: quay.io/elvis/repo:hello-world")
-    rt.add_argument('--tag', '-t', type=str,
-                    help='Tag all built images with this tag. If image names are ALREADY tags (i.e.,'
-                         ' your repo name ends in a ":"), this will append the tag name with a dash. '
-                         'For example: `docker-make hello-world -u elvis/repo: -t 1.0` will create '
-                         'the image "elvis/repo:hello-world-1.0')
-    rt.add_argument('--push-to-registry', '-P', action='store_true',
-                    help='Push all built images to the repository specified '
-                         '(only if image repository contains a URL) -- to push to dockerhub.com, '
-                         'use index.docker.io as the registry)')
-
-    hh = parser.add_argument_group('Help')
-    hh.add_argument('--help-yaml', action='store_true',
-                    help="Print summary of YAML file format and exit.")
-
-    return parser

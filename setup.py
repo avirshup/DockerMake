@@ -9,5 +9,10 @@ setup(
         license='Apache 2.0',
         author='Aaron Virshup',
         author_email='avirshup@gmail.com',
-        description='Build manager for docker images'
+        description='Build manager for docker images',
+        entry_points={
+                  'console_scripts': [
+                      'docker-make = dockermake.__main__:main'
+                  ]
+              }
 )
