@@ -86,7 +86,7 @@ class ImageDefs(object):
                                                        buildname))
                 base_image = buildname
 
-        sourcebuilds = [self.generate_build(image, image) for image in sourceimages]
+        sourcebuilds = [self.generate_build(img, img) for img in sourceimages]
 
 
         return builds.BuildTarget(imagename=image,

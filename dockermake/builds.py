@@ -177,8 +177,9 @@ class BuildTarget(object):
         for build in self.sourcebuilds:
             if build.targetname in _updated_staging_images:
                 continue
-            print('\n\nUpdating source image %s' % build.targetname)
+            print('\nUpdating source image %s' % build.targetname)
             build.build(client)
+            print('Done with source image %s\n')
 
     def finalizenames(self, client, finalimage, keepbuildtags):
         """ Tag the built image with its final name and untag intermediate containers
