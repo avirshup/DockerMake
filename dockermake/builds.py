@@ -187,9 +187,11 @@ class BuildTarget(object):
         client.tag(finalimage, *self.targetname.split(':'))
         print('Tagged final image as %s\n' % self.targetname)
         if not keepbuildtags:
+            print('Untagging intermediate containers:', end='')
             for step in self.steps:
                 client.remove_image(step.buildname, force=True)
-                print('Untagged intermediate container "%s"' % step.buildname)
+                print(step.buildname, end=',')
+            print()
 
 
 class BuildError(Exception):

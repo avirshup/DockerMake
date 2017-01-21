@@ -55,3 +55,8 @@ data_science:
    blank_file:
      /data/file.txt: /data/blankfile.txt
 
+final:
+ requires:
+   - data_science
+ build: |
+   ENV version=0.01
