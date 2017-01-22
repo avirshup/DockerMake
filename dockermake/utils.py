@@ -12,7 +12,12 @@ from __future__ import print_function
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import collections
+import os
+import sys
+import textwrap
 
+import yaml
 import docker
 
 _dockerclient = None
@@ -62,8 +67,10 @@ def get_build_targets(args, defs):
         # Assemble a custom target from requirements
         assert args.requires and args.name
         assert args.name not in defs.ymldefs
-        defs.ymldefs[args.name] = {'requires': args.requires}
+        defs.ymldefs[args.name] = {'requires': args.requires,
+                                   '_sourcefile': "command line arguments"}
         targets = [args.name]
+
     elif args.all:
         # build all targets in the file
         assert len(args.TARGETS) == 0, "Pass either a list of targets or `--all`, not both"
@@ -84,11 +91,14 @@ def build_targets(args, defs, targets):
     else:
         client = get_client_api()
     built, warnings = [], []
-    builders = [defs.generate_build(t, generate_name(t, args)) for t in targets]
+    builders = [defs.generate_build(t, generate_name(t, args), rebuilds=args.bust_cache)
+                for t in targets]
     for b in builders:
         b.build(client,
                 printdockerfiles=args.print_dockerfiles,
-                nobuild=args.no_build)
+                nobuild=args.no_build,
+                usecache=not args.no_cache,
+                pull=args.pull)
         print('  docker-make built:', b.targetname)
         built.append(b.targetname)
         if args.push_to_registry:
@@ -130,3 +140,58 @@ def push(client, name):
         else:
             success = True
     return success, warnings
+
+
+def human_readable_size(num, suffix='B'):
+    """ FROM http://stackoverflow.com/a/1094933/1958900
+    """
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
+
+
+def stream_build_log(stream, name):
+    textwidth = get_console_width() - 10
+    wrapper = textwrap.TextWrapper(initial_indent=u'|\u2022"',
+                                   subsequent_indent='| ',
+                                   break_on_hyphens=False,
+                                   width=textwidth)
+
+    logtitle = '%s: BUILD LOG' % name
+    numdash = (textwidth - len(logtitle) - 7) // 2
+    header = ''.join(['-'*numdash, "   %s   " % logtitle, '-'*numdash])
+    print(header)
+
+    pullstats = collections.OrderedDict()
+    for item in stream:
+        if list(item.keys()) == ['stream']:
+            line = item['stream'].strip()
+        elif 'errorDetail' in item or 'error' in item:
+            raise ValueError(item)
+        elif 'status' in item and 'id' in item:  # for pulling images
+            line = _show_pull_status(pullstats, item)
+        else:
+            line = str(item)
+
+        for s in wrapper.wrap(line):
+            print(s)
+
+    print('-'*len(header))
+
+
+def get_console_width():
+    try:
+        _, consolewidth = map(int, os.popen('stty size', 'r').read().split())
+    except:
+        consolewidth = 80
+    return consolewidth
+
+
+def _show_pull_status(pullstats, item):
+    imgid = item['id']
+    stat = item['status']
+    if stat != pullstats.get(imgid, None):
+        pullstats[imgid] = stat
+        return '%s: %s' % (imgid, stat)

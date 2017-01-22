@@ -13,10 +13,13 @@
 # limitations under the License.
 
 from __future__ import print_function
+
+import docker.errors
 from builtins import object
 
 import os
 import tempfile
+import shutil
 
 from . import utils
 
@@ -24,9 +27,16 @@ BUILD_CACHEDIR = os.path.join(tempfile.gettempdir(), 'dmk_cache')
 BUILD_TEMPDIR = os.path.join(tempfile.gettempdir(), 'dmk_download')
 
 
+def clear_copy_cache():
+    for path in (BUILD_CACHEDIR, BUILD_TEMPDIR):
+        if os.path.exists(path):
+            assert os.path.isdir(path), "'%s' is not a directory!"
+            print('Removing docker-make cache %s' % path)
+            shutil.rmtree(path)
+
+
 class StagedFile(object):
-    """ Tracks a file or directory that will be built in one container then made available to
-    be copied into another
+    """ Tracks a file or directory that will be built in one image, then copied into others
 
     Args:
         sourceimage (str): name of the image to copy from
@@ -47,18 +57,24 @@ class StagedFile(object):
             startimage (str): name of the image to stage these files into
             newimage (str): name of the created image
         """
+        from .builds import BuildError
+
         client = utils.get_client()
-        print('\nCopying %s://%s -> %s://%s/ ...'%(self.sourceimage, self.sourcepath,
+        print(' * Copying FROM "%s:/%s" TO "%s://%s/"'%(self.sourceimage, self.sourcepath,
                                                      startimage, self.destpath))
 
         # copy build artifacts from the container if necessary
         cachedir = self._setcache(client)
         if not os.path.exists(cachedir):
-            print('Creating cache at %s' % cachedir)
+            print(' * Creating cache at %s' % cachedir)
             container = client.containers.create(self.sourceimage)
-            tarfile_stream, tarfile_stats = container.get_archive(self.sourcepath)
+            try:
+                tarfile_stream, tarfile_stats = container.get_archive(self.sourcepath)
+            except docker.errors.NotFound:
+                raise IOError('File "%s" does not exist in image "%s"!' %
+                              (self.sourcepath, self.sourceimage))
 
-            # write files to disk (would be nice to stream them, not sure how)
+            # write files to disk (would be nice to stream them, haven't gotten it to work)
             tempdir = tempfile.mkdtemp(dir=BUILD_TEMPDIR)
             with open(os.path.join(tempdir, 'content.tar'), 'wb') as localfile:
                 for chunk in tarfile_stream.stream():
@@ -66,14 +82,23 @@ class StagedFile(object):
             os.mkdir(cachedir)
             os.rename(tempdir, cachedir)
         else:
-            print('Using cached files from %s' % cachedir)
+            print(' * Using cached files from %s' % cachedir)
 
         # write Dockerfile for the new image and then build it
+        dockerfile = 'FROM %s\nADD content.tar %s' % (startimage, self.destpath)
         with open(os.path.join(cachedir, 'Dockerfile'), 'w') as df:
-            df.write('FROM %s\nADD content.tar %s' % (startimage, self.destpath))
-        client.images.build(path=cachedir,
-                            tag=newimage)
-        print('Done. Created image "%s"' % newimage)
+            df.write(dockerfile)
+
+        buildargs = dict(path=cachedir,
+                         tag=newimage,
+                         decode=True)
+
+        # Build and show logs
+        stream = client.api.build(**buildargs)
+        try:
+            utils.stream_build_log(stream, newimage)
+        except ValueError as e:
+            raise BuildError(dockerfile, e.args[0], build_args=buildargs)
 
     def _setcache(self, client):
         if self._sourceobj is None:  # get image and set up cache if necessary

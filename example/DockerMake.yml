@@ -51,7 +51,7 @@ data_science:
   - python_image
   - airline_data
   - plant_data
- built_files:
+ copy_from:
    blank_file:
      /data/file.txt: /data/blankfile.txt
 

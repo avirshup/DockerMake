@@ -37,7 +37,7 @@ def make_arg_parser():
                     help="Name for custom docker images (requires --requires)")
 
     df = parser.add_argument_group('Dockerfiles')
-    df.add_argument('-p', '--print_dockerfiles', action='store_true',
+    df.add_argument('-p', '--print-dockerfiles', '--print_dockerfiles', action='store_true',
                     help="Print out the generated dockerfiles named `Dockerfile.[image]`")
     df.add_argument('-n', '--no_build', action='store_true',
                     help='Only print Dockerfiles, don\'t build them. Implies --print.')
@@ -47,7 +47,11 @@ def make_arg_parser():
                     help='Always try to pull updated FROM images')
     ca.add_argument('--no-cache', action='store_true',
                     help="Rebuild every layer")
-    # TODO: add a way to invalidate a specific target
+    ca.add_argument('--bust-cache', action='append',
+                    help='Force docker to rebuilt all layers in this image. You can bust '
+                    'multiple image layers by passing --bust-cache multiple times.')
+    ca.add_argument('--clean-copycache', action='store_true',
+                    help="Remove docker-make's cache of files for `copy-from`.")
 
     rt = parser.add_argument_group('Repositories and tags')
     rt.add_argument('--repository', '-r', '-u',

@@ -22,6 +22,9 @@ import yaml
 
 from . import builds
 
+RECOGNIZED_KEYS = set('requires build_directory build copy_from FROM description _sourcefile'
+                      .split())
+SPECIAL_FIELDS = set('_ALL_ _SOURCES_'.split())
 
 class ImageDefs(object):
     """ Stores and processes the image definitions
@@ -29,6 +32,7 @@ class ImageDefs(object):
     def __init__(self, makefile_path):
         self._sources = set()
         self.makefile_path = makefile_path
+        print('Working directory: %s' % os.path.abspath(os.curdir))
         self.ymldefs = self.parse_yaml(self.makefile_path)
         self.all_targets = self.ymldefs.pop('_ALL_', None)
 
@@ -36,15 +40,13 @@ class ImageDefs(object):
         fname = os.path.expanduser(filename)
         print('READING %s' % os.path.expanduser(fname))
         if fname in self._sources:
-            raise ValueError('Circular _SOURCE_')
+            raise ValueError('Circular _SOURCES_')
         self._sources.add(fname)
 
         with open(fname, 'r') as yaml_file:
             yamldefs = yaml.load(yaml_file)
 
-        # Interpret build directory paths relative to this DockerMake.yml file
-        for item in yamldefs.values():
-            _fix_build_path(item, os.path.dirname(fname))
+        self._fix_file_paths(filename, yamldefs)
 
         sourcedefs = {}
         for s in yamldefs.get('_SOURCES_', []):
@@ -54,7 +56,34 @@ class ImageDefs(object):
         sourcedefs.update(yamldefs)
         return sourcedefs
 
-    def generate_build(self, image, targetname):
+    @staticmethod
+    def _fix_file_paths(ymlfilepath, yamldefs):
+        """ Interpret all paths relative the the current yaml file
+        """
+        pathroot = os.path.dirname(ymlfilepath)
+
+        for field, item in yamldefs.iteritems():
+            if field == '_SOURCES_':
+                yamldefs['_SOURCES_'] = [os.path.relpath(_get_abspath(pathroot, p))
+                                         for p in yamldefs['_SOURCES_']]
+                continue
+            elif field in SPECIAL_FIELDS:
+                continue
+            elif 'build_directory' in item:
+                item['build_directory'] = _get_abspath(pathroot, item['build_directory'])
+
+            # save the file path for logging
+            f = os.path.relpath(ymlfilepath)
+            if '/' not in f:
+                f = './%s' % f
+            item['_sourcefile'] = f
+
+            for key in item:
+                if key not in RECOGNIZED_KEYS:
+                    raise KeyError('Field "%s" in image "%s" not recognized' %
+                                   (key, field))
+
+    def generate_build(self, image, targetname, rebuilds=None):
         """
         Separate the build into a series of one or more intermediate steps.
         Each specified build directory gets its own step
@@ -62,29 +91,38 @@ class ImageDefs(object):
         Args:
             image (str): name of the image as defined in the dockermake.py file
             targetname (str): name to tag the final built image with
+            rebuilds (List[str]): list of image layers to rebuild (i.e., without docker's cache)
         """
-        base_image = self.get_external_base_image(image)
+        from_image = self.get_external_base_image(image)
         build_steps = []
         istep = 0
         sourceimages = set()
+        if rebuilds is None:
+            rebuilds = []
+        else:
+            rebuilds = set(rebuilds)
 
+        base_image = from_image
         for base_name in self.sort_dependencies(image):
             istep += 1
             buildname = 'dmkbuild_%s_%d' % (image, istep)
             build_steps.append(builds.BuildStep(base_name,
                                                 base_image,
                                                 self.ymldefs[base_name],
-                                                buildname))
+                                                buildname,
+                                                bust_cache=base_name in rebuilds))
             base_image = buildname
 
-            for sourceimage, files in self.ymldefs[base_name].get('built_files', {}).iteritems():
+            for sourceimage, files in self.ymldefs[base_name].get('copy_from', {}).iteritems():
                 sourceimages.add(sourceimage)
                 for sourcepath, destpath in files.iteritems():
                     istep += 1
                     buildname = 'dmkbuild_%s_%d' % (image, istep)
                     build_steps.append(builds.FileCopyStep(sourceimage, sourcepath,
                                                            base_image, destpath,
-                                                           buildname))
+                                                           buildname,
+                                                           self.ymldefs[base_name],
+                                                           base_name))
                     base_image = buildname
 
         sourcebuilds = [self.generate_build(img, img) for img in sourceimages]
@@ -92,7 +130,8 @@ class ImageDefs(object):
         return builds.BuildTarget(imagename=image,
                                   targetname=targetname,
                                   steps=build_steps,
-                                  sourcebuilds=sourcebuilds)
+                                  sourcebuilds=sourcebuilds,
+                                  from_image=from_image)
 
     def sort_dependencies(self, image, dependencies=None):
         """
@@ -103,10 +142,10 @@ class ImageDefs(object):
            dependencies (OrderedDict): running cache of sorted dependencies (ordered dict)
 
         Returns:
-            OrderedDict: dictionary of this image's requirements
+            List[str]: list of dependencies a topologically-sorted build order
         """
         if dependencies is None:
-            dependencies = OrderedDict()
+            dependencies = OrderedDict()  # using this as an ordered set - not storing any values
 
         if image in dependencies:
             return
@@ -119,7 +158,7 @@ class ImageDefs(object):
         if image in dependencies:
             raise ValueError('Circular dependency found', dependencies)
         dependencies[image] = None
-        return dependencies
+        return dependencies.keys()
 
     def get_external_base_image(self, image):
         """ Makes sure that this image has exactly one external base image
@@ -147,15 +186,13 @@ class ImageDefs(object):
         return externalbase
 
 
-def _fix_build_path(item, filepath):
-    path = os.path.expanduser(filepath)
+def _get_abspath(pathroot, relpath):
+    path = os.path.expanduser(pathroot)
+    buildpath = os.path.expanduser(relpath)
 
-    if 'build_directory' not in item:
-        return
-    elif os.path.isabs(item['build_directory']):
-        return
-    else:
-        item['build_directory'] = os.path.join(os.path.abspath(path),
-                                               item['build_directory'])
+    if not os.path.isabs(buildpath):
+        buildpath = os.path.join(os.path.abspath(path), buildpath)
+
+    return buildpath
 
 
