@@ -1,9 +1,9 @@
 data_image:
- FROM: phusion/baseimage
+ FROM: debian:jessie
  build: RUN mkdir /data
 
 devbase:
- FROM: phusion/baseimage
+ FROM: debian:jessie
  build: |
   RUN apt-get -y update && apt-get -y install \
       build-essential \
@@ -22,6 +22,12 @@ plant_data:
  build_directory: sample_data/plant_growth
  build: |
   ADD Puromycin.csv /data
+
+blank_file:
+  FROM: debian:jessie
+  build: |
+    RUN mkdir -p /data
+    RUN dd if=/dev/zero of=/data/file.txt count=1024 bs=1024
 
 python_image:
  requires:
@@ -45,3 +51,12 @@ data_science:
   - python_image
   - airline_data
   - plant_data
+ copy_from:
+   blank_file:
+     /data/file.txt: /data/blankfile.txt
+
+final:
+ requires:
+   - data_science
+ build: |
+   ENV version=0.01

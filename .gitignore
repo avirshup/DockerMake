@@ -1,8 +1,7 @@
-### Example user template template
-### Example user template
 docker_makefiles
 Dockerfile.fail
 _docker_make_tmp
+dockerfile.fail
 
 # IntelliJ project files
 .idea
