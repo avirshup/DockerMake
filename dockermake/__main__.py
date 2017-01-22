@@ -18,9 +18,8 @@ Multiple inheritance for your dockerfiles.
 from __future__ import print_function
 import os
 
-from . import cli
+from . import cli, utils, staging
 from .imagedefs import ImageDefs
-from . import utils
 
 
 def main():
@@ -37,6 +36,10 @@ def main():
     # Print help and exit
     if args.help_yaml:
         cli.print_yaml_help()
+        return
+
+    if args.clear_copy_cache:
+        staging.clear_copy_cache()
         return
 
     if not os.path.exists(args.makefile):

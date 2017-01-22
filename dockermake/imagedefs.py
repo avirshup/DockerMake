@@ -21,6 +21,7 @@ from collections import OrderedDict
 import yaml
 
 from . import builds
+from . import staging
 
 RECOGNIZED_KEYS = set('requires build_directory build copy_from FROM description _sourcefile'
                       .split())
@@ -33,6 +34,7 @@ class ImageDefs(object):
         self._sources = set()
         self.makefile_path = makefile_path
         print('Working directory: %s' % os.path.abspath(os.curdir))
+        print('Copy cache directory: %s' % staging.TMPDIR)
         self.ymldefs = self.parse_yaml(self.makefile_path)
         self.all_targets = self.ymldefs.pop('_ALL_', None)
 

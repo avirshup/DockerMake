@@ -1,4 +1,3 @@
-from __future__ import print_function
 # Copyright 2015-2017 Autodesk Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,6 +11,8 @@ from __future__ import print_function
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import print_function
+
 import collections
 import os
 import sys
@@ -153,15 +154,15 @@ def human_readable_size(num, suffix='B'):
 
 
 def stream_build_log(stream, name):
-    textwidth = get_console_width() - 10
-    wrapper = textwrap.TextWrapper(initial_indent=u'|\u2022"',
-                                   subsequent_indent='| ',
+    textwidth = get_console_width() - 5
+    wrapper = textwrap.TextWrapper(initial_indent='  ',
+                                   subsequent_indent='  ',
                                    break_on_hyphens=False,
                                    width=textwidth)
 
     logtitle = '%s: BUILD LOG' % name
     numdash = (textwidth - len(logtitle) - 7) // 2
-    header = ''.join(['-'*numdash, "   %s   " % logtitle, '-'*numdash])
+    header = ''.join(['  ','-'*numdash, "   %s   " % logtitle, '-'*numdash])
     print(header)
 
     pullstats = collections.OrderedDict()
@@ -178,7 +179,7 @@ def stream_build_log(stream, name):
         for s in wrapper.wrap(line):
             print(s)
 
-    print('-'*len(header))
+    print(' ', '-'*len(header))
 
 
 def get_console_width():

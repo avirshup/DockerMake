@@ -23,8 +23,9 @@ import shutil
 
 from . import utils
 
-BUILD_CACHEDIR = os.path.join(tempfile.gettempdir(), 'dmk_cache')
-BUILD_TEMPDIR = os.path.join(tempfile.gettempdir(), 'dmk_download')
+TMPDIR = tempfile.gettempdir()
+BUILD_CACHEDIR = os.path.join(TMPDIR, 'dmk_cache')
+BUILD_TEMPDIR = os.path.join(TMPDIR, 'dmk_download')
 
 
 def clear_copy_cache():
@@ -33,6 +34,8 @@ def clear_copy_cache():
             assert os.path.isdir(path), "'%s' is not a directory!"
             print('Removing docker-make cache %s' % path)
             shutil.rmtree(path)
+        else:
+            print('Cache directory %s does not exist.' % path)
 
 
 class StagedFile(object):
@@ -61,12 +64,13 @@ class StagedFile(object):
 
         client = utils.get_client()
         print(' * Copying FROM "%s:/%s" TO "%s://%s/"'%(self.sourceimage, self.sourcepath,
-                                                     startimage, self.destpath))
+                                                        startimage, self.destpath))
 
         # copy build artifacts from the container if necessary
         cachedir = self._setcache(client)
+        cacherelpath = os.path.relpath(cachedir, TMPDIR)
         if not os.path.exists(cachedir):
-            print(' * Creating cache at %s' % cachedir)
+            print(' * Creating cache at %s' % cacherelpath)
             container = client.containers.create(self.sourceimage)
             try:
                 tarfile_stream, tarfile_stats = container.get_archive(self.sourcepath)
@@ -82,7 +86,7 @@ class StagedFile(object):
             os.mkdir(cachedir)
             os.rename(tempdir, cachedir)
         else:
-            print(' * Using cached files from %s' % cachedir)
+            print(' * Using cached files from %s' % cacherelpath)
 
         # write Dockerfile for the new image and then build it
         dockerfile = 'FROM %s\nADD content.tar %s' % (startimage, self.destpath)
@@ -112,12 +116,12 @@ class StagedFile(object):
                 os.mkdir(BUILD_TEMPDIR)
 
             image_cachedir = os.path.join(BUILD_CACHEDIR,
-                                          self._sourceobj.id)
+                                          self._sourceobj.id.replace('sha256:', ''))
             if not os.path.exists(image_cachedir):
                 os.mkdir(image_cachedir)
 
             self._cachedir = os.path.join(image_cachedir,
-                                          self.sourcepath.replace('/', '--'))
+                                          self.sourcepath.replace('/', '_-'))
             return self._cachedir
 
         else:  # make sure image ID hasn't changed

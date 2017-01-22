@@ -50,7 +50,7 @@ def make_arg_parser():
     ca.add_argument('--bust-cache', action='append',
                     help='Force docker to rebuilt all layers in this image. You can bust '
                     'multiple image layers by passing --bust-cache multiple times.')
-    ca.add_argument('--clean-copycache', action='store_true',
+    ca.add_argument('--clear-copy-cache', '--clear-cache', action='store_true',
                     help="Remove docker-make's cache of files for `copy-from`.")
 
     rt = parser.add_argument_group('Repositories and tags')
