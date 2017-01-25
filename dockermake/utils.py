@@ -38,8 +38,12 @@ def get_client():
 
 
 def list_image_defs(args, defs):
+    from . import imagedefs
+
     print('TARGETS in `%s`' % args.makefile)
-    for item in list(defs.ymldefs.keys()):
+    for item in sorted(defs.ymldefs.keys()):
+        if item in imagedefs.SPECIAL_FIELDS:
+            continue
         print(' *', item)
     return
 
@@ -123,24 +127,20 @@ def push(client, name):
         print(warn)
     else:
         print('  Pushing %s to %s:' % (name, name.split('/')[0]))
-        line = {'error': 'no push information received'}
-        _lastid = None
-        for line in client.push(name, stream=True):
-            line = yaml.load(line)
-            if 'status' in line:
-                if line.get('id', None) == _lastid and line['status'] == 'Pushing':
-                    print('\r', line['status'], line['id'], line.get('progress', ''), end=' ')
-                    sys.stdout.flush()
-                else:
-                    print(line['status'], line.get('id', ''))
-                    _lastid = line.get('id', None)
-            else:
-                print(line)
+        stream = _linestream(client.push(name, stream=True))
+        line = stream_docker_logs(stream, 'PUSH %s' % name)
+
         if 'error' in line:
             warnings.append('WARNING: push failed for %s. Message: %s' % (name, line['error']))
         else:
             success = True
     return success, warnings
+
+
+def _linestream(textstream):
+    for item in textstream:
+        for line in item.splitlines():
+            yield yaml.load(line)
 
 
 def human_readable_size(num, suffix='B'):
@@ -153,7 +153,7 @@ def human_readable_size(num, suffix='B'):
     return "%.1f%s%s" % (num, 'Yi', suffix)
 
 
-def stream_build_log(stream, name):
+def stream_docker_logs(stream, name):
     textwidth = get_console_width() - 5
     wrapper = textwrap.TextWrapper(initial_indent='  ',
                                    subsequent_indent='  ',
@@ -172,7 +172,8 @@ def stream_build_log(stream, name):
         elif 'errorDetail' in item or 'error' in item:
             raise ValueError(item)
         elif 'status' in item and 'id' in item:  # for pulling images
-            line = _show_pull_status(pullstats, item)
+            line = _show_xfer_state(pullstats, item)
+            if line is None: continue
         else:
             line = str(item)
 
@@ -180,6 +181,7 @@ def stream_build_log(stream, name):
             print(s)
 
     print(' ', '-'*len(header))
+    return line
 
 
 def get_console_width():
@@ -190,9 +192,20 @@ def get_console_width():
     return consolewidth
 
 
-def _show_pull_status(pullstats, item):
+SHOWSIZE = set(('Pushing', 'Pulling', 'Pulled', 'Downloaded', 'Downloading'))
+
+def _show_xfer_state(pullstats, item):
     imgid = item['id']
     stat = item['status']
     if stat != pullstats.get(imgid, None):
         pullstats[imgid] = stat
-        return '%s: %s' % (imgid, stat)
+
+        if stat in SHOWSIZE and item.get('progressDetail', {}).get('total', None):
+            toprint = '%s: %s (%s)' % (imgid, stat,
+                                       human_readable_size(item['progressDetail']['total']))
+        else:
+            toprint = '%s: %s' % (imgid, stat)
+
+        return toprint
+    else:
+        return None

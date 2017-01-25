@@ -14,10 +14,10 @@ Table of Contents
 
 ### Install
 
-Requires Docker (obviously), and Python 2.7 or 3.4+ with pip.
+Requires [Docker](https://www.docker.com/products/docker), and Python (2.7, or 3.4+).
 
 ```
-pip install git+https://github.com/avirshup/DockerMake 
+pip install git+https://github.com/autodesk/DockerMake 
 ```
 
 This will install the command line tool, `docker-make`, and its supporting python package, which you can import as `import dockermake`. 
@@ -28,22 +28,25 @@ This will install the command line tool, `docker-make`, and its supporting pytho
 To build some illustrative examples, try running:
 
 ```bash
-wget https://raw.githubusercontent.com/avirshup/DockerMake/master/example/DockerMake.yml
+wget https://raw.githubusercontent.com/autodesk/DockerMake/master/example/DockerMake.yml
+
 docker-make --list
 docker-make data_science --repo docker.io/myusername --tag testbuild
 ```
 
 
 ### What you can do with it
+ * **New**: Build an artifact (such as an executable or library) in one image, then copy it into a smaller image for deployment
+ * **New**: easily invalidate the docker image cache at an arbitrary layer
  * Define small pieces of configuration or functionality, then mix them together into production docker images.
  * "Inherit" Dockerfile instructions from multiple sources
- * **New**: Build an artifact (such as an executable or library) in one image, then copy it into a smaller image for deployment
  * Easily manage images that pull files from multiple directories on your filesystem
- * Rebuild an entire stack of images as needed with a single command
+ * Easily manage images that pull binaries from other _docker images_ that you've defined
+ * Build and push an entire stack of images with a single command
  
 
 ### Example
-[Click here to see how we're using this in production.](https://github.com/Autodesk/molecular-design-toolkit/blob/master/docker_images/DockerMake.yml)
+[Click here to see how we're using this in production.](https://github.com/Autodesk/molecular-design-toolkit/blob/workflow_fixes/DockerMakefiles/)
 
 This example builds a single docker image called `data_science`. It does this by mixing together three components: `devbase` (the base image), `airline_data` (a big CSV file), and `python_image` (a python installation). `docker-make` will create an image that combines all of these components.
 
@@ -109,12 +112,13 @@ The idea is to write dockerfile commands for each specific piece of functionalit
   build_directory: [path where the ADD and COPY commands will look for files]
     # note that the "build_directory" path can be relative or absolute.
     # if it's relative, it's interpreted relative to DockerMake.yml's directory
-  built_files:
+  copy_from:  # Note: the copy_from commands will always run AFTER any build commands
     [source_image]:
        [source path1]:[destination path1]
        [source path2]:[destination path2]
        [...]
-    [...]
+    [source_image_2]:
+       [...]
    
 
 [other image name]: [...]
@@ -131,12 +135,12 @@ eval $(docker-machine env [machine-name])
 
 ### Command line usage 
 ```
-usage: docker-make.py [-h] [-f MAKEFILE] [-a] [-l]
-                      [--requires [REQUIRES [REQUIRES ...]]] [--name NAME]
-                      [-p] [-n] [--pull] [--no-cache]
-                      [--repository REPOSITORY] [--tag TAG]
-                      [--push-to-registry] [--help-yaml]
-                      [TARGETS [TARGETS ...]]
+usage: docker-make [-h] [-f MAKEFILE] [-a] [-l]
+                   [--requires [REQUIRES [REQUIRES ...]]] [--name NAME] [-p]
+                   [-n] [--pull] [--no-cache] [--bust-cache BUST_CACHE]
+                   [--clear-copy-cache] [--repository REPOSITORY] [--tag TAG]
+                   [--push-to-registry] [--version] [--help-yaml]
+                   [TARGETS [TARGETS ...]]
 
 NOTE: Docker environmental variables must be set. For a docker-machine, run
 `eval $(docker-machine env [machine-name])`
@@ -157,7 +161,7 @@ Choosing what to build:
   --name NAME           Name for custom docker images (requires --requires)
 
 Dockerfiles:
-  -p, --print_dockerfiles
+  -p, --print-dockerfiles, --print_dockerfiles
                         Print out the generated dockerfiles named
                         `Dockerfile.[image]`
   -n, --no_build        Only print Dockerfiles, don't build them. Implies
@@ -166,6 +170,12 @@ Dockerfiles:
 Image caching:
   --pull                Always try to pull updated FROM images
   --no-cache            Rebuild every layer
+  --bust-cache BUST_CACHE
+                        Force docker to rebuilt all layers in this image. You
+                        can bust multiple image layers by passing --bust-cache
+                        multiple times.
+  --clear-copy-cache, --clear-cache
+                        Remove docker-make's cache of files for `copy_from`.
 
 Repositories and tags:
   --repository REPOSITORY, -r REPOSITORY, -u REPOSITORY
@@ -187,10 +197,11 @@ Repositories and tags:
                         to dockerhub.com, use index.docker.io as the registry)
 
 Help:
+  --version             Print version and exit.
   --help-yaml           Print summary of YAML file format and exit.
 ```
 
 
-Written by Aaron Virshup, Bio/Nano Research Group, Autodesk Research
+Written by Aaron Virshup, BioNano Group at Autodesk
 
 Copyright (c) 2015-2017, Autodesk Inc. Released under the Apache 2.0 License.

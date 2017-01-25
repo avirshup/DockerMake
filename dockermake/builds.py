@@ -90,7 +90,7 @@ class BuildStep(object):
         # start the build
         stream = client.build(**build_args)
         try:
-            utils.stream_build_log(stream, self.buildname)
+            utils.stream_docker_logs(stream, self.buildname)
         except ValueError as e:
             raise BuildError(dockerfile, e.args[0], build_args)
 

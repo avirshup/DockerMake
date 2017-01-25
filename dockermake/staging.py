@@ -100,7 +100,7 @@ class StagedFile(object):
         # Build and show logs
         stream = client.api.build(**buildargs)
         try:
-            utils.stream_build_log(stream, newimage)
+            utils.stream_docker_logs(stream, newimage)
         except ValueError as e:
             raise BuildError(dockerfile, e.args[0], build_args=buildargs)
 
