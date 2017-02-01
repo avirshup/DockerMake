@@ -14,7 +14,7 @@ Table of Contents
 
 ### Install
 
-Requires [Docker](https://www.docker.com/products/docker), and Python (2.7, or 3.4+).
+Requires [Docker](https://www.docker.com/products/docker), and Python (2.7 or 3.4+).
 
 ```
 pip install git+https://github.com/autodesk/DockerMake 
@@ -85,7 +85,7 @@ data_science:
 
 To build an image called `alice/data_science`, you can run:
 ```bash
-docker-make.py data_science --repository alice
+docker-make data_science --repository alice
 ```
 which will create an image with all the commands in `python_image` and `airline_data`.
 
