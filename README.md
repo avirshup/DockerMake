@@ -23,7 +23,7 @@ Table of Contents
  3. The builds are not tied to any image's tag or repository - when you build an image with `docker-make`, it will be up-to-date. 
 
 ### Example
-[Click here to see a production-level example.](https://github.com/Autodesk/molecular-design-toolkit/blob/master/docker_images/DockerMake.yml)
+[Click here to see a production-level example.](https://github.com/Autodesk/molecular-design-toolkit/blob/master/DockerMakefiles/DockerMake.yml)
 
 This example builds a single docker image called `data_science`. It does this by mixing together three components: `devbase` (the base image), `airline_data` (a big CSV file), and `python_image` (a python installation). `docker-make` will create an image that combines all of these components.
 
