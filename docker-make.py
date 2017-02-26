@@ -24,7 +24,8 @@ from io import StringIO, BytesIO
 import argparse
 import pprint
 
-import docker, docker.utils
+import docker
+import docker.utils
 import yaml
 
 
@@ -44,8 +45,12 @@ class DockerMaker(object):
         # Connect to docker daemon if necessary
         if build_images:
             connection = docker.utils.kwargs_from_env()
-            connection['tls'].assert_hostname = False
-            self.client = docker.Client(**connection)
+            try:
+                connection['tls'].assert_hostname = False
+            except KeyError as e:
+                print('WARNING: Key error %s' % (e))
+            finally:
+                self.client = docker.Client(**connection)
         else:
             self.client = None
 
@@ -64,7 +69,8 @@ class DockerMaker(object):
     def parse_yaml(self, filename):
         fname = os.path.expanduser(filename)
         print 'READING %s' % os.path.expanduser(fname)
-        if fname in self._sources: raise ValueError('Circular _SOURCE_')
+        if fname in self._sources:
+            raise ValueError('Circular _SOURCE_')
         self._sources.add(fname)
 
         with open(fname, 'r') as yaml_file:
@@ -199,9 +205,11 @@ class DockerMaker(object):
         :param dependencies: running cache of sorted dependencies (ordered dict)
         :return type: OrderedDict
         """
-        if dependencies is None: dependencies = OrderedDict()
+        if dependencies is None:
+            dependencies = OrderedDict()
 
-        if com in dependencies: return
+        if com in dependencies:
+            return
         requires = self.img_defs[com].get('requires', [])
         assert type(requires) == list, 'Requirements for %s are not a list' % com
 
@@ -271,7 +279,8 @@ def main():
 
     if args.list:
         print 'TARGETS in `%s`' % args.makefile
-        for item in maker.img_defs.keys(): print ' *', item
+        for item in maker.img_defs.keys():
+            print ' *', item
         return
 
     # Assemble custom requirements target
@@ -292,7 +301,8 @@ def main():
     if not targets:
         print 'No build targets specified!'
         print 'Targets in `%s`:' % args.makefile
-        for item in maker.img_defs.keys(): print ' *', item
+        for item in maker.img_defs.keys():
+            print ' *', item
         return
 
     # Actually build the images! (or Dockerfiles)
@@ -304,16 +314,20 @@ def main():
         if args.push_to_registry:
             success, w = push(maker, name)
             warnings.extend(w)
-            if not success: built[-1] += ' -- PUSH FAILED'
-            else: built[-1] += ' -- pushed to %s' % name.split('/')[0]
+            if not success:
+                built[-1] += ' -- PUSH FAILED'
+            else:
+                built[-1] += ' -- pushed to %s' % name.split('/')[0]
 
     # Summarize the build process
     print '\ndocker-make finished.'
     print 'Built: '
-    for item in built: print ' *', item
+    for item in built:
+        print ' *', item
     if warnings:
         print 'Warnings:'
-        for item in warnings: print ' *', item
+        for item in warnings:
+            print ' *', item
 
 
 def push(maker, name):
@@ -409,8 +423,7 @@ def printable_code(c):
 
 
 def make_arg_parser():
-    parser = argparse.ArgumentParser(description=
-                                     "NOTE: Docker environmental variables must be set.\n"
+    parser = argparse.ArgumentParser(description="NOTE: Docker environmental variables must be set.\n"
                                      "For a docker-machine, run "
                                      "`eval $(docker-machine env [machine-name])`")
     bo = parser.add_argument_group('Choosing what to build')
@@ -488,4 +501,5 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
-if __name__ == '__main__': main()
+if __name__ == '__main__':
+    main()
