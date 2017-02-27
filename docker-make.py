@@ -196,7 +196,20 @@ class DockerMaker(object):
                 step.build_dir = mydir
 
             step.images.append(d)
+            from_dockerfile = dep_definition.get('import_dockerfile', 'Dockerfile')
+            from_dockerfile = os.path.join(step.build_dir, from_dockerfile)
+            # print('from_dockerfile: %s' % from_dockerfile)
+            if os.path.exists(from_dockerfile):
+                try:
+                    with open(from_dockerfile, 'r') as import_dockerfile:
+                        step.dockerfile.append('\n#Commands from %s' % from_dockerfile)
+                        dockerfile = import_dockerfile.read()
+                        # print('dockerfile: %s' % dockerfile)
+                        step.dockerfile.append(dockerfile)
+                except IOError:
+                    print("IOError -> Can't import `%s`" % from_dockerfile)
             if 'build' in dep_definition:
+                # print("dep_definition['build']: %s" % dep_definition['build'])
                 step.dockerfile.append('\n#Commands for %s' % d)
                 step.dockerfile.append(dep_definition['build'])
             else:
