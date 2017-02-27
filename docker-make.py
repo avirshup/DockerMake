@@ -35,7 +35,8 @@ class DockerMaker(object):
                  print_dockerfiles=False,
                  no_cache=False,
                  tag=None,
-                 pull=False):
+                 pull=False,
+                 buildargs=None):
 
         self._sources = set()
         self.makefile_path = makefile
@@ -65,6 +66,14 @@ class DockerMaker(object):
         self.print_dockerfiles = print_dockerfiles
         self.pull = pull
         self.no_cache = no_cache
+
+        self.buildargs = {}
+        fname = buildargs
+        print 'READING %s' % os.path.expanduser(fname)
+        with open(fname, 'r') as yaml_file:
+            self.buildargs = yaml.load(yaml_file)
+        #
+        print 'buildargs dict `%s`' % self.buildargs
 
     def parse_yaml(self, filename):
         fname = os.path.expanduser(filename)
@@ -137,6 +146,9 @@ class DockerMaker(object):
             build_args['dockerfile'] = tempname + 'Dockerfile'
         else:
             build_args['fileobj'] = StringIO(unicode(dockerfile))
+
+        #
+        build_args['buildargs'] = self.buildargs
 
         # start the build
         stream = self.client.build(**build_args)
@@ -272,10 +284,12 @@ def main():
         return
 
     # Otherwise, parse the yaml file
+    # buildargs
     maker = DockerMaker(args.makefile, repository=args.repository,
                         build_images=not (args.no_build or args.list),
                         print_dockerfiles=(args.print_dockerfiles or args.no_build),
-                        pull=args.pull, no_cache=args.no_cache, tag=args.tag)
+                        pull=args.pull, no_cache=args.no_cache, tag=args.tag,
+                        buildargs=args.buildargs)
 
     if args.list:
         print 'TARGETS in `%s`' % args.makefile
@@ -440,6 +454,10 @@ def make_arg_parser():
                     help='Build a special image from these requirements. Requires --name')
     bo.add_argument('--name', type=str,
                     help="Name for custom docker images (requires --requires)")
+
+    bo.add_argument('-b', '--buildargs',
+                    default='buildargs.yml',
+                    help="YAML file containing build args")
 
     df = parser.add_argument_group('Dockerfiles')
     df.add_argument('-p', '--print_dockerfiles', action='store_true',
