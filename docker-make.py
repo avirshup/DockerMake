@@ -24,7 +24,8 @@ from io import StringIO, BytesIO
 import argparse
 import pprint
 
-import docker, docker.utils
+import docker
+import docker.utils
 import yaml
 
 
@@ -34,7 +35,8 @@ class DockerMaker(object):
                  print_dockerfiles=False,
                  no_cache=False,
                  tag=None,
-                 pull=False):
+                 pull=False,
+                 buildargs=None):
 
         self._sources = set()
         self.makefile_path = makefile
@@ -44,8 +46,12 @@ class DockerMaker(object):
         # Connect to docker daemon if necessary
         if build_images:
             connection = docker.utils.kwargs_from_env()
-            connection['tls'].assert_hostname = False
-            self.client = docker.Client(**connection)
+            try:
+                connection['tls'].assert_hostname = False
+            except KeyError as e:
+                print('WARNING: Key error %s' % (e))
+            finally:
+                self.client = docker.Client(**connection)
         else:
             self.client = None
 
@@ -61,10 +67,19 @@ class DockerMaker(object):
         self.pull = pull
         self.no_cache = no_cache
 
+        self.buildargs = {}
+        fname = buildargs
+        print 'READING %s' % os.path.expanduser(fname)
+        with open(fname, 'r') as yaml_file:
+            self.buildargs = yaml.load(yaml_file)
+        #
+        print 'buildargs dict `%s`' % self.buildargs
+
     def parse_yaml(self, filename):
         fname = os.path.expanduser(filename)
         print 'READING %s' % os.path.expanduser(fname)
-        if fname in self._sources: raise ValueError('Circular _SOURCE_')
+        if fname in self._sources:
+            raise ValueError('Circular _SOURCE_')
         self._sources.add(fname)
 
         with open(fname, 'r') as yaml_file:
@@ -132,6 +147,9 @@ class DockerMaker(object):
         else:
             build_args['fileobj'] = StringIO(unicode(dockerfile))
 
+        #
+        build_args['buildargs'] = self.buildargs
+
         # start the build
         stream = self.client.build(**build_args)
 
@@ -178,7 +196,20 @@ class DockerMaker(object):
                 step.build_dir = mydir
 
             step.images.append(d)
+            from_dockerfile = dep_definition.get('import_dockerfile', 'Dockerfile')
+            from_dockerfile = os.path.join(step.build_dir, from_dockerfile)
+            # print('from_dockerfile: %s' % from_dockerfile)
+            if os.path.exists(from_dockerfile):
+                try:
+                    with open(from_dockerfile, 'r') as import_dockerfile:
+                        step.dockerfile.append('\n#Commands from %s' % from_dockerfile)
+                        dockerfile = import_dockerfile.read()
+                        # print('dockerfile: %s' % dockerfile)
+                        step.dockerfile.append(dockerfile)
+                except IOError:
+                    print("IOError -> Can't import `%s`" % from_dockerfile)
             if 'build' in dep_definition:
+                # print("dep_definition['build']: %s" % dep_definition['build'])
                 step.dockerfile.append('\n#Commands for %s' % d)
                 step.dockerfile.append(dep_definition['build'])
             else:
@@ -199,9 +230,11 @@ class DockerMaker(object):
         :param dependencies: running cache of sorted dependencies (ordered dict)
         :return type: OrderedDict
         """
-        if dependencies is None: dependencies = OrderedDict()
+        if dependencies is None:
+            dependencies = OrderedDict()
 
-        if com in dependencies: return
+        if com in dependencies:
+            return
         requires = self.img_defs[com].get('requires', [])
         assert type(requires) == list, 'Requirements for %s are not a list' % com
 
@@ -264,14 +297,17 @@ def main():
         return
 
     # Otherwise, parse the yaml file
+    # buildargs
     maker = DockerMaker(args.makefile, repository=args.repository,
                         build_images=not (args.no_build or args.list),
                         print_dockerfiles=(args.print_dockerfiles or args.no_build),
-                        pull=args.pull, no_cache=args.no_cache, tag=args.tag)
+                        pull=args.pull, no_cache=args.no_cache, tag=args.tag,
+                        buildargs=args.buildargs)
 
     if args.list:
         print 'TARGETS in `%s`' % args.makefile
-        for item in maker.img_defs.keys(): print ' *', item
+        for item in maker.img_defs.keys():
+            print ' *', item
         return
 
     # Assemble custom requirements target
@@ -292,7 +328,8 @@ def main():
     if not targets:
         print 'No build targets specified!'
         print 'Targets in `%s`:' % args.makefile
-        for item in maker.img_defs.keys(): print ' *', item
+        for item in maker.img_defs.keys():
+            print ' *', item
         return
 
     # Actually build the images! (or Dockerfiles)
@@ -304,16 +341,20 @@ def main():
         if args.push_to_registry:
             success, w = push(maker, name)
             warnings.extend(w)
-            if not success: built[-1] += ' -- PUSH FAILED'
-            else: built[-1] += ' -- pushed to %s' % name.split('/')[0]
+            if not success:
+                built[-1] += ' -- PUSH FAILED'
+            else:
+                built[-1] += ' -- pushed to %s' % name.split('/')[0]
 
     # Summarize the build process
     print '\ndocker-make finished.'
     print 'Built: '
-    for item in built: print ' *', item
+    for item in built:
+        print ' *', item
     if warnings:
         print 'Warnings:'
-        for item in warnings: print ' *', item
+        for item in warnings:
+            print ' *', item
 
 
 def push(maker, name):
@@ -409,8 +450,7 @@ def printable_code(c):
 
 
 def make_arg_parser():
-    parser = argparse.ArgumentParser(description=
-                                     "NOTE: Docker environmental variables must be set.\n"
+    parser = argparse.ArgumentParser(description="NOTE: Docker environmental variables must be set.\n"
                                      "For a docker-machine, run "
                                      "`eval $(docker-machine env [machine-name])`")
     bo = parser.add_argument_group('Choosing what to build')
@@ -427,6 +467,10 @@ def make_arg_parser():
                     help='Build a special image from these requirements. Requires --name')
     bo.add_argument('--name', type=str,
                     help="Name for custom docker images (requires --requires)")
+
+    bo.add_argument('-b', '--buildargs',
+                    default='buildargs.yml',
+                    help="YAML file containing build args")
 
     df = parser.add_argument_group('Dockerfiles')
     df.add_argument('-p', '--print_dockerfiles', action='store_true',
@@ -488,4 +532,5 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
-if __name__ == '__main__': main()
+if __name__ == '__main__':
+    main()
