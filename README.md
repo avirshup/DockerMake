@@ -46,7 +46,7 @@ docker-make data_science --repo docker.io/myusername --tag testbuild
  
 
 ### Example
-[Click here to see how we're using this in production.](https://github.com/Autodesk/molecular-design-toolkit/blob/workflow_fixes/DockerMakefiles/)
+[Click here to see how we're using this in production.](https://github.com/Autodesk/molecular-design-toolkit/tree/master/DockerMakefiles)
 
 This example builds a single docker image called `data_science`. It does this by mixing together three components: `devbase` (the base image), `airline_data` (a big CSV file), and `python_image` (a python installation). `docker-make` will create an image that combines all of these components.
 
