@@ -68,12 +68,11 @@ class DockerMaker(object):
         self.no_cache = no_cache
 
         self.buildargs = {}
-        fname = buildargs
-        print 'READING %s' % os.path.expanduser(fname)
-        with open(fname, 'r') as yaml_file:
-            self.buildargs = yaml.load(yaml_file)
-        #
-        print 'buildargs dict `%s`' % self.buildargs
+        if buildargs:
+            fname = os.path.expanduser(buildargs)
+            print 'READING %s' % fname
+            with open(fname, 'r') as yaml_file:
+                self.buildargs = yaml.load(yaml_file)
 
     def parse_yaml(self, filename):
         fname = os.path.expanduser(filename)
@@ -147,7 +146,6 @@ class DockerMaker(object):
         else:
             build_args['fileobj'] = StringIO(unicode(dockerfile))
 
-        #
         build_args['buildargs'] = self.buildargs
 
         # start the build
@@ -457,6 +455,7 @@ def make_arg_parser():
     bo.add_argument('TARGETS', nargs="*",
                     help='Docker images to build as specified in the YAML file')
     bo.add_argument('-f', '--makefile',
+                    type=argparse.FileType('r'),
                     default='DockerMake.yml',
                     help='YAML file containing build instructions')
     bo.add_argument('-a', '--all', action='store_true',
@@ -469,7 +468,7 @@ def make_arg_parser():
                     help="Name for custom docker images (requires --requires)")
 
     bo.add_argument('-b', '--buildargs',
-                    default='buildargs.yml',
+                    type=argparse.FileType('r'),
                     help="YAML file containing build args")
 
     df = parser.add_argument_group('Dockerfiles')
