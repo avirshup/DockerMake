@@ -69,10 +69,8 @@ class DockerMaker(object):
 
         self.buildargs = {}
         if buildargs:
-        print 'READING %s' % os.path.expanduser(fname)
-            print 'READING %s' % fname
-        with open(fname, 'r') as yaml_file:
-            self.buildargs = yaml.load(yaml_file)
+            print 'READING %s' % buildargs.name
+            self.buildargs = yaml.load(buildargs)
 
     def parse_yaml(self, filename):
         fname = os.path.expanduser(filename)
