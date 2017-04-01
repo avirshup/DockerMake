@@ -3,17 +3,11 @@ language: python
 python:
   - "2.7"
 
-addons:
-  apt:
-    packages:
-      - git
-
 sudo: required
 services:
   - docker
 
 install:
-  - pip install -e .
+  - pip install .
 
-
-#script: py.test -n 4
+script: docker-make --help

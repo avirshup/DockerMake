@@ -1,6 +1,8 @@
 # Docker-make
 Build and manage stacks of docker images - a dependency graph for Docker images
  
+[![Build Status](https://travis-ci.org/avirshup/DockerMake.svg?branch=master)](https://travis-ci.org/avirshup/DockerMake)
+
 Table of Contents
 =================
  * [Install](#Install)
