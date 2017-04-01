@@ -2,12 +2,16 @@ language: python
 
 python:
   - "2.7"
+  - "3.5"
 
 sudo: required
 services:
   - docker
 
+before_install:
+  - pip install pytest
+
 install:
   - pip install .
 
-script: docker-make --help
+script: docker-make --help  # placeholder
