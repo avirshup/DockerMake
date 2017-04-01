@@ -1,0 +1,25 @@
+language: python
+
+python:
+- '2.7'
+
+sudo: required
+
+services:
+- docker
+
+before_install:
+- pip install pytest
+
+install:
+- pip install .
+script: cd test && py.test
+
+deploy:
+  provider: pypi
+  user: avirshup
+  password:
+    secure: TYbx42AboT7VtAy+YCbmRkEraJhkDYMX4uQeEjZe+JNqsdFQ+4YWkEjkTCiMg2GO944W75NqBe3Cq6+UN3GYscM6QSZ/N+A/ME0V4JnC/N6AVPo0M+ns0lvBKm34dsafjWozf0J5Jwt5pK8UBByR6fEru5SvZej2IAow2cZzJRATFpq5YbVBuS77zDOZKk3526xzqGq1U/Ay/e/ar/ZTVTkdY78PDC3pLSs6aie+LtJJee80czUkMTXK8CTQz3g1ni37tNVhYWKdZjAdnfSbJWP8BB/SDW+/TBaKAHBhmTRbFWhiPJKvhFmqSt7JG7Nzu0zWqqh+blgXiQjseWmJB7hbPvr4g7lIHtUYdjTPPvQXYRt+6TNAm6N0Lx/gMPLnfN9t1VKv9ZAtgM8jKLoY+jBmpmZyx5QeO+clsLOqCh+wkeJUULtHJWeSQ6mz5PlgDgVu3gx6/d21uR1I7bHbohZAQ707J1bDhzjsolbQ+NzyMYlVuEoJs0NVnGTVR7q5NzjGSgYODFdbf1QZXeB/KeZmjskAzmNsUe1sGQsPIA4KtLS+PAYDdCJiH1i54/yaXF7Uj4g+vpdrOMKaVyEdtaS8yeiAcH18tDIqPwkWCFxboLcSreV4FcTrBocwUwbJhznC5vq2YgOKUf8DVtv+YeC4KcTLUufm0ybd24rbvW0=
+  on:
+    tags: true
+    repo: avirshup/DockerMake

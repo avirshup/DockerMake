@@ -1,2 +1,3 @@
-docker-py
-PyYAML
+docker
+future
+pyyaml

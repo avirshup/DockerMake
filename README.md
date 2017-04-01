@@ -1,29 +1,54 @@
 # Docker-make
-Build and manage stacks of docker images - a dependency graph for Dockerfiles
+Build and manage stacks of docker images - a dependency graph for Docker images
  
+[![Build Status](https://travis-ci.org/avirshup/DockerMake.svg?branch=master)](https://travis-ci.org/avirshup/DockerMake)
+
 Table of Contents
 =================
+ * [Install](#Install)
+ * [Run it](#Run-it)
  * [What you can do with it](#what-you-can-do-with-it)
  * [Example](#example)
  * [Writing DockerMake\.yaml](#writing-dockermakeyaml)
  * [Requirements](#requirements)
  * [Command line usage](#command-line-usage)
 
-### What you can do with it
- * Define small pieces of configuration or functionality, then mix them together into production docker images.
- * "Inherit" from multiple image builds
- * Easily manage images that pull files from multiple directories on your filesystem
- * Rebuild an entire stack of images as needed with a single command
- 
-**How is this different from docker-compose?**<br> `docker-make` automates and manages the process of building docker images. `docker-compose` spins up containers and links them to make serivces.
 
-**How is this different from the FROM command in Dockerfiles?**
- 1. Using the `requires` field, you can inherit from multiple images.
- 2. You can create builds that reference multiple directories on your filesystem using the `build_directory` keyword.
- 3. The builds are not tied to any image's tag or repository - when you build an image with `docker-make`, it will be up-to-date. 
+### Install
+
+Requires [Docker](https://www.docker.com/products/docker), and Python (2.7 or 3.4+).
+
+```
+pip install git+https://github.com/autodesk/DockerMake 
+```
+
+This will install the command line tool, `docker-make`, and its supporting python package, which you can import as `import dockermake`. 
+
+
+### Run it
+
+To build some illustrative examples, try running:
+
+```bash
+wget https://raw.githubusercontent.com/autodesk/DockerMake/master/example/DockerMake.yml
+
+docker-make --list
+docker-make data_science --repo docker.io/myusername --tag testbuild
+```
+
+
+### What you can do with it
+ * **New**: Build an artifact (such as an executable or library) in one image, then copy it into a smaller image for deployment
+ * **New**: easily invalidate the docker image cache at an arbitrary layer
+ * Define small pieces of configuration or functionality, then mix them together into production docker images.
+ * "Inherit" Dockerfile instructions from multiple sources
+ * Easily manage images that pull files from multiple directories on your filesystem
+ * Easily manage images that pull binaries from other _docker images_ that you've defined
+ * Build and push an entire stack of images with a single command
+ 
 
 ### Example
-[Click here to see a production-level example.](https://github.com/Autodesk/molecular-design-toolkit/blob/master/DockerMakefiles/DockerMake.yml)
+[Click here to see how we're using this in production.](https://github.com/Autodesk/molecular-design-toolkit/tree/master/DockerMakefiles)
 
 This example builds a single docker image called `data_science`. It does this by mixing together three components: `devbase` (the base image), `airline_data` (a big CSV file), and `python_image` (a python installation). `docker-make` will create an image that combines all of these components.
 
@@ -62,7 +87,7 @@ data_science:
 
 To build an image called `alice/data_science`, you can run:
 ```bash
-docker-make.py data_science --repository alice
+docker-make data_science --repository alice
 ```
 which will create an image with all the commands in `python_image` and `airline_data`.
 
@@ -77,18 +102,29 @@ Here's the dependency graph and generated Dockerfiles:
 The idea is to write dockerfile commands for each specific piece of functionality in the `build` field, and "inherit" all other functionality from a list of other components that your image `requires`. If you need to add files with the ADD and COPY commands,  specify the root directory for those files with `build_directory`. Your tree of "requires" must have _exactly one_ unique named base image in the `FROM` field.
 ```yaml
 [image_name]:
-  build_directory: [relative path where the ADD and COPY commands will look for files]
   requires:
-   - [other image name]
-   - [yet another image name]
+    - [other image name]
+    - [yet another image name]
+    [...]
   FROM: [named_base_image]
   build: |
-   RUN [something]
-   ADD [something else]
-   [Dockerfile commands go here]
+    RUN [something]
+    ADD [something else]
+    [Dockerfile commands go here]
+  build_directory: [path where the ADD and COPY commands will look for files]
+    # note that the "build_directory" path can be relative or absolute.
+    # if it's relative, it's interpreted relative to DockerMake.yml's directory
+  copy_from:  # Note: the copy_from commands will always run AFTER any build commands
+    [source_image]:
+       [source path1]:[destination path1]
+       [source path2]:[destination path2]
+       [...]
+    [source_image_2]:
+       [...]
+   
 
-[other image name]: ...
-[yet another image name]: ...
+[other image name]: [...]
+[...]
 ```
 
 
@@ -101,12 +137,12 @@ eval $(docker-machine env [machine-name])
 
 ### Command line usage 
 ```
-usage: docker-make.py [-h] [-f MAKEFILE] [-a] [-l]
-                      [--requires [REQUIRES [REQUIRES ...]]] [--name NAME]
-                      [-p] [-n] [--pull] [--no-cache]
-                      [--repository REPOSITORY] [--tag TAG]
-                      [--push-to-registry] [--help-yaml]
-                      [TARGETS [TARGETS ...]]
+usage: docker-make [-h] [-f MAKEFILE] [-a] [-l]
+                   [--requires [REQUIRES [REQUIRES ...]]] [--name NAME] [-p]
+                   [-n] [--pull] [--no-cache] [--bust-cache BUST_CACHE]
+                   [--clear-copy-cache] [--repository REPOSITORY] [--tag TAG]
+                   [--push-to-registry] [--version] [--help-yaml]
+                   [TARGETS [TARGETS ...]]
 
 NOTE: Docker environmental variables must be set. For a docker-machine, run
 `eval $(docker-machine env [machine-name])`
@@ -127,7 +163,7 @@ Choosing what to build:
   --name NAME           Name for custom docker images (requires --requires)
 
 Dockerfiles:
-  -p, --print_dockerfiles
+  -p, --print-dockerfiles, --print_dockerfiles
                         Print out the generated dockerfiles named
                         `Dockerfile.[image]`
   -n, --no_build        Only print Dockerfiles, don't build them. Implies
@@ -136,6 +172,12 @@ Dockerfiles:
 Image caching:
   --pull                Always try to pull updated FROM images
   --no-cache            Rebuild every layer
+  --bust-cache BUST_CACHE
+                        Force docker to rebuilt all layers in this image. You
+                        can bust multiple image layers by passing --bust-cache
+                        multiple times.
+  --clear-copy-cache, --clear-cache
+                        Remove docker-make's cache of files for `copy_from`.
 
 Repositories and tags:
   --repository REPOSITORY, -r REPOSITORY, -u REPOSITORY
@@ -157,10 +199,11 @@ Repositories and tags:
                         to dockerhub.com, use index.docker.io as the registry)
 
 Help:
+  --version             Print version and exit.
   --help-yaml           Print summary of YAML file format and exit.
 ```
 
 
-Written by Aaron Virshup, Bio/Nano Research Group, Autodesk Research
+Written by Aaron Virshup, BioNano Group at Autodesk
 
-Copyright (c) 2016, Autodesk Inc. Released under the simplified BSD license.
+Copyright (c) 2015-2017, Autodesk Inc. Released under the Apache 2.0 License.
