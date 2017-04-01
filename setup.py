@@ -13,6 +13,7 @@ setup(
         author='Aaron Virshup',
         author_email='avirshup@gmail.com',
         description='Build manager for docker images',
+        url="https://github.com/avirshup/dockermake",
         entry_points={
                   'console_scripts': [
                       'docker-make = dockermake.__main__:main'
