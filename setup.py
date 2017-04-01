@@ -1,6 +1,9 @@
 from distutils.core import setup
 import versioneer
 
+with open('requirements.txt', 'r') as reqfile:
+    requirements = [x.strip() for x in reqfile if x.strip()]
+
 setup(
         name='DockerMake',
         version=versioneer.get_version(),
@@ -14,5 +17,7 @@ setup(
                   'console_scripts': [
                       'docker-make = dockermake.__main__:main'
                   ]
-              }
+        },
+        install_requires=requirements,
+
 )
