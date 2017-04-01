@@ -224,7 +224,12 @@ class BuildTarget(object):
             print(' *** Successfully built image %s\n' % self.targetname)
 
     def _get_stack_key(self, istep):
-        names = [self.from_image] + [step.imagename for step in self.steps[:istep+1]]
+        names = [self.from_image]
+        for i in xrange(istep+1):
+            step = self.steps[i]
+            if isinstance(step, FileCopyStep):
+                continue
+            names.append(step.imagename)
         return tuple(names)
 
     def update_source_images(self, client, usecache, pull):
