@@ -14,4 +14,4 @@ before_install:
 install:
   - pip install .
 
-script: docker-make --help  # placeholder
+script: cd test && py.test

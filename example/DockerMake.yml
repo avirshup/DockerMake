@@ -5,9 +5,8 @@ data_image:
 devbase:
  FROM: debian:jessie
  build: |
-  RUN apt-get -y update && apt-get -y install \
-      build-essential \
-   && mkdir -p /opt
+  RUN apt-get -y update && apt-get -y install wget
+  RUN mkdir -p /opt
 
 airline_data:
  requires:
@@ -23,7 +22,10 @@ plant_data:
  build: |
   ADD Puromycin.csv /data
 
-blank_file:
+blank_file_build:
+  description: |
+    This image isn't intended for deployment! Rather, files built in this environment
+    can be copied into other images (see data_science.copy_from below)
   FROM: debian:jessie
   build: |
     RUN mkdir -p /data
@@ -35,15 +37,7 @@ python_image:
  build: |
   RUN apt-get install -y \
     python \
-    python-dev \
-    python-pip \
-    python-numpy \
-    python-scipy \
-    python-pandas \
-    liblapack-dev \
-    libblas-dev \
-    gfortran \
-    libpng12-dev
+    python-pip
   RUN pip install Pint
 
 data_science:
@@ -52,8 +46,8 @@ data_science:
   - airline_data
   - plant_data
  copy_from:
-   blank_file:
-     /data/file.txt: /data/blankfile.txt
+   blank_file_build:
+     /data/file.txt: /data
 
 final:
  requires:
