@@ -35,5 +35,9 @@ def test_list():
 
 def test_example_build():
     subprocess.check_call(
-        "docker run final ls data/AirPassengers.csv data/Puromycin.csv data/file.txt".split(),
+        "docker-make final --repo myrepo --tag mytag".split(),
+        cwd=EXAMPLEDIR)
+
+    subprocess.check_call(
+        "docker run myrepo/final:mytag ls data/AirPassengers.csv data/Puromycin.csv data/file.txt".split(),
         cwd=EXAMPLEDIR)
