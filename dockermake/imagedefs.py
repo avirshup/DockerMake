@@ -19,6 +19,7 @@ from builtins import object
 import os
 from collections import OrderedDict
 import yaml
+from future.utils import iteritems
 
 from . import builds
 from . import staging
@@ -64,7 +65,7 @@ class ImageDefs(object):
         """
         pathroot = os.path.dirname(ymlfilepath)
 
-        for field, item in yamldefs.iteritems():
+        for field, item in iteritems(yamldefs):
             if field == '_SOURCES_':
                 yamldefs['_SOURCES_'] = [os.path.relpath(_get_abspath(pathroot, p))
                                          for p in yamldefs['_SOURCES_']]
@@ -115,9 +116,9 @@ class ImageDefs(object):
                                                 bust_cache=base_name in rebuilds))
             base_image = buildname
 
-            for sourceimage, files in self.ymldefs[base_name].get('copy_from', {}).iteritems():
+            for sourceimage, files in iteritems(self.ymldefs[base_name].get('copy_from', {})):
                 sourceimages.add(sourceimage)
-                for sourcepath, destpath in files.iteritems():
+                for sourcepath, destpath in iteritems(files):
                     istep += 1
                     buildname = 'dmkbuild_%s_%d' % (image, istep)
                     build_steps.append(builds.FileCopyStep(sourceimage, sourcepath,
