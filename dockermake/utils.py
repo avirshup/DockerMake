@@ -32,7 +32,7 @@ def get_client():
     global _dockerclient
 
     if _dockerclient is None:
-        _dockerclient = docker.from_env()
+        _dockerclient = docker.from_env(version='auto')
 
     return _dockerclient
 

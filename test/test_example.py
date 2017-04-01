@@ -22,7 +22,7 @@ def test_list():
     output = subprocess.check_output('docker-make --list'.split(),
                                      cwd=EXAMPLEDIR)
 
-    expected = set(('airline_data blank_file data_image data_science '
+    expected = set(('airline_data blank_file_build data_image data_science '
                     'devbase final plant_data python_image').split())
 
     for line in list(output.splitlines())[4:]:
