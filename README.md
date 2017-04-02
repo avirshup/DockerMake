@@ -16,10 +16,10 @@ Table of Contents
 
 ### Install
 
-Requires [Docker](https://www.docker.com/products/docker), and Python (2.7 or 3.4+).
+Requires [Docker](https://www.docker.com/products/docker) and Python 2.7.
 
 ```
-pip install git+https://github.com/autodesk/DockerMake 
+pip install DockerMake 
 ```
 
 This will install the command line tool, `docker-make`, and its supporting python package, which you can import as `import dockermake`. 
@@ -27,13 +27,13 @@ This will install the command line tool, `docker-make`, and its supporting pytho
 
 ### Run it
 
-To build some illustrative examples, try running:
+To build some illustrative examples, try running the example in this repository:
 
 ```bash
-wget https://raw.githubusercontent.com/autodesk/DockerMake/master/example/DockerMake.yml
-
+git clone https://github.com/avirshup/DockerMake
+cd DockerMake/example
 docker-make --list
-docker-make data_science --repo docker.io/myusername --tag testbuild
+docker-make final
 ```
 
 
@@ -177,7 +177,7 @@ Image caching:
                         can bust multiple image layers by passing --bust-cache
                         multiple times.
   --clear-copy-cache, --clear-cache
-                        Remove docker-make's cache of files for `copy_from`.
+                        Remove docker-make's cache of files for `copy-from`.
 
 Repositories and tags:
   --repository REPOSITORY, -r REPOSITORY, -u REPOSITORY
