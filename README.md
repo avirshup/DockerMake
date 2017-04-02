@@ -16,10 +16,10 @@ Table of Contents
 
 ### Install
 
-Requires [Docker](https://www.docker.com/products/docker), and Python (2.7 or 3.4+).
+Requires [Docker](https://www.docker.com/products/docker) and Python 2.7.
 
 ```
-pip install dockermake 
+pip install DockerMake 
 ```
 
 This will install the command line tool, `docker-make`, and its supporting python package, which you can import as `import dockermake`. 
@@ -177,7 +177,7 @@ Image caching:
                         can bust multiple image layers by passing --bust-cache
                         multiple times.
   --clear-copy-cache, --clear-cache
-                        Remove docker-make's cache of files for `copy_from`.
+                        Remove docker-make's cache of files for `copy-from`.
 
 Repositories and tags:
   --repository REPOSITORY, -r REPOSITORY, -u REPOSITORY

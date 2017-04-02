@@ -1,2 +1,16 @@
 include versioneer.py
 include dockermake/_version.py
+include requirements.txt
+include example
+include example/DockerMake.yml
+include example/sample_data
+include example/sample_data/airline_data
+include example/sample_data/airline_data/AirPassengers.csv
+include example/sample_data/plant_growth
+include example/sample_data/plant_growth/Puromycin.csv
+include img
+include img/step1.png
+include img/step2.png
+include LICENSE
+include MANIFEST.in
+include README.md
