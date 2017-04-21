@@ -155,6 +155,8 @@ def human_readable_size(num, suffix='B'):
 
 def stream_docker_logs(stream, name):
     textwidth = get_console_width() - 5
+    if textwidth <= 2:
+        textwidth = 100
     wrapper = textwrap.TextWrapper(initial_indent='  ',
                                    subsequent_indent='  ',
                                    break_on_hyphens=False,
