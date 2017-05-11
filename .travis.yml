@@ -1,25 +1,21 @@
 language: python
-
 python:
-- '2.7'
-
+ - '2.7'
+ - '3.5'
+ - '3.6'
 sudo: required
-
 services:
 - docker
-
 before_install:
 - pip install pytest
-
 install:
 - pip install .
 script: cd test && py.test
-
 deploy:
   provider: pypi
   user: avirshup
   password:
-    secure: TYbx42AboT7VtAy+YCbmRkEraJhkDYMX4uQeEjZe+JNqsdFQ+4YWkEjkTCiMg2GO944W75NqBe3Cq6+UN3GYscM6QSZ/N+A/ME0V4JnC/N6AVPo0M+ns0lvBKm34dsafjWozf0J5Jwt5pK8UBByR6fEru5SvZej2IAow2cZzJRATFpq5YbVBuS77zDOZKk3526xzqGq1U/Ay/e/ar/ZTVTkdY78PDC3pLSs6aie+LtJJee80czUkMTXK8CTQz3g1ni37tNVhYWKdZjAdnfSbJWP8BB/SDW+/TBaKAHBhmTRbFWhiPJKvhFmqSt7JG7Nzu0zWqqh+blgXiQjseWmJB7hbPvr4g7lIHtUYdjTPPvQXYRt+6TNAm6N0Lx/gMPLnfN9t1VKv9ZAtgM8jKLoY+jBmpmZyx5QeO+clsLOqCh+wkeJUULtHJWeSQ6mz5PlgDgVu3gx6/d21uR1I7bHbohZAQ707J1bDhzjsolbQ+NzyMYlVuEoJs0NVnGTVR7q5NzjGSgYODFdbf1QZXeB/KeZmjskAzmNsUe1sGQsPIA4KtLS+PAYDdCJiH1i54/yaXF7Uj4g+vpdrOMKaVyEdtaS8yeiAcH18tDIqPwkWCFxboLcSreV4FcTrBocwUwbJhznC5vq2YgOKUf8DVtv+YeC4KcTLUufm0ybd24rbvW0=
+    secure: n7N6SYWcbQNGe/tKXbEaIXwTlcrRuGoiavYvfiKLEHUOWFa64teuY5tho2hR/Z3MwWceQ3vtXuUw9xUt1WHcK4C2lqBS9I3wiQ31qwwbIcoynIyK37EazsM2mba7Z1HKZIo69KxgWyknGFhqBSUv48KnJPiaDWVi73YzqZJU/NPtjjp+zzubBuDihoMR5WamIm6sS8Wa/QpaJW0rVV9aet9aXzNRMAb9SuF/JotVnHNNos2Ksq4PTiCUC+2WyxfIcOF86znKpb6/MhuF1O+5v7s4KltG6pEg8SI5h3DrqTZIzQab3ueLnxsDqK2VzVBzfcy3wtMySuAmQPNClimub1XKfOWsdeKHbtZ92H1wQa/zYeKeSGmQN8fCbD49LsMEL7RfcVQn6re+WAygSv+63VnYsQG1MsW5EQZIcnoULQ5WRq5NRN/cJu2KPhabhAs/cFih02UjJjQCVI3/j2ZihExcT3PJQkj2JuPWM8VfOOVUD95TdJdYWvfUDTumIuKHxEqRTBYS/aC39c63LhHqmf1zYwEYpgUky8YZwXbT5m5nEqmxVxLM4zP3P0MCjJWI9KWrgUeZSYnZ0b+CUWqwyQckUhmJAK1HPA7SzfZqlkJ0bRy/3mKLFgHOqeTzX3Iq8IuqaRsBe1F3f4YjcB+JzJSOZ6U53QFDLjSFbo/V/NU=
   on:
     tags: true
     repo: avirshup/DockerMake
