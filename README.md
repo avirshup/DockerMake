@@ -16,7 +16,7 @@ Table of Contents
 
 ### Install
 
-Requires [Docker](https://www.docker.com/products/docker) and Python 2.7.
+Requires [Docker](https://www.docker.com/products/docker) and Python 2.7 or 3.5+.
 
 ```
 pip install DockerMake 
