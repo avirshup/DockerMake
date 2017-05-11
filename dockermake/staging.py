@@ -60,7 +60,7 @@ class StagedFile(object):
             startimage (str): name of the image to stage these files into
             newimage (str): name of the created image
         """
-        from .builds import BuildError
+        from .step import BuildError
 
         client = utils.get_client()
         print(' * Copying FROM "%s:/%s" TO "%s://%s/"'%(self.sourceimage, self.sourcepath,

@@ -41,6 +41,8 @@ def make_arg_parser():
                     help="Print out the generated dockerfiles named `Dockerfile.[image]`")
     df.add_argument('-n', '--no_build', action='store_true',
                     help='Only print Dockerfiles, don\'t build them. Implies --print.')
+    df.add_argument('--dockerfile-dir', default='docker_makefiles',
+                    help='Directory to save dockerfiles in (default: ./docker_makefiles)')
 
     ca = parser.add_argument_group('Image caching')
     ca.add_argument('--pull', action='store_true',

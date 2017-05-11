@@ -100,13 +100,17 @@ def build_targets(args, defs, targets):
                 for t in targets]
     for b in builders:
         b.build(client,
-                printdockerfiles=args.print_dockerfiles,
                 nobuild=args.no_build,
                 usecache=not args.no_cache,
                 pull=args.pull)
-        print('  docker-make built:', b.targetname)
+        if not args.no_build:
+            print('  docker-make built:', b.targetname)
+
+        if args.print_dockerfiles or args.no_build:
+            b.write_dockerfile(args.dockerfile_dir)
+
         built.append(b.targetname)
-        if args.push_to_registry:
+        if args.push_to_registry and not args.nobuild:
             success, w = push(client, b.targetname)
             warnings.extend(w)
             if not success:

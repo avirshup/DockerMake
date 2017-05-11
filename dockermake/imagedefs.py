@@ -21,12 +21,14 @@ from collections import OrderedDict
 import yaml
 from future.utils import iteritems
 
+import dockermake.step
 from . import builds
 from . import staging
 
 RECOGNIZED_KEYS = set('requires build_directory build copy_from FROM description _sourcefile'
                       .split())
 SPECIAL_FIELDS = set('_ALL_ _SOURCES_'.split())
+
 
 class ImageDefs(object):
     """ Stores and processes the image definitions
@@ -109,11 +111,11 @@ class ImageDefs(object):
         for base_name in self.sort_dependencies(image):
             istep += 1
             buildname = 'dmkbuild_%s_%d' % (image, istep)
-            build_steps.append(builds.BuildStep(base_name,
-                                                base_image,
-                                                self.ymldefs[base_name],
-                                                buildname,
-                                                bust_cache=base_name in rebuilds))
+            build_steps.append(dockermake.step.BuildStep(base_name,
+                                                         base_image,
+                                                         self.ymldefs[base_name],
+                                                         buildname,
+                                                         bust_cache=base_name in rebuilds))
             base_image = buildname
 
             for sourceimage, files in iteritems(self.ymldefs[base_name].get('copy_from', {})):
@@ -121,11 +123,11 @@ class ImageDefs(object):
                 for sourcepath, destpath in iteritems(files):
                     istep += 1
                     buildname = 'dmkbuild_%s_%d' % (image, istep)
-                    build_steps.append(builds.FileCopyStep(sourceimage, sourcepath,
-                                                           base_image, destpath,
-                                                           buildname,
-                                                           self.ymldefs[base_name],
-                                                           base_name))
+                    build_steps.append(dockermake.step.FileCopyStep(sourceimage, sourcepath,
+                                                                    base_image, destpath,
+                                                                    buildname,
+                                                                    self.ymldefs[base_name],
+                                                                    base_name))
                     base_image = buildname
 
         sourcebuilds = [self.generate_build(img, img) for img in sourceimages]
