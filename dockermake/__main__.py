@@ -17,6 +17,7 @@ Multiple inheritance for your dockerfiles.
 """
 from __future__ import print_function
 import os
+import sys
 
 from . import cli, utils, staging
 from .imagedefs import ImageDefs
@@ -43,11 +44,12 @@ def main():
         return
 
     if not os.path.exists(args.makefile):
+        print('No docker makefile found at path "%s"'%args.makefile)
         if args.makefile == 'DockerMake.yml':
-            parser.print_help()
-            return
-        else:
-            raise IOError('No docker makefile found at path "%s"' % args.makefile)
+            print('Type `docker-make --help` to see usage.')
+        sys.exit(1)
+
+
 
     defs = ImageDefs(args.makefile)
 
