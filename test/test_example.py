@@ -40,7 +40,8 @@ def test_push():
     if 'QUAYUSER' in os.environ and 'QUAYTOKEN' in os.environ:
         subprocess.check_call(['docker','login',
                                '-u',os.environ['QUAYUSER'],
-                               '-p',os.environ['QUAYTOKEN']])
+                               '-p',os.environ['QUAYTOKEN'],
+                               'quay.io'])
     subprocess.check_call(['docker-make','testimage','--repo',
                            'quay.io/avirshup/docker-make-test-push-target:',
                            '--tag', customtag, '--push'],
