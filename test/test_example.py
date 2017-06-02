@@ -1,8 +1,10 @@
 import os
+import uuid
 import subprocess
 import pytest
 
 EXAMPLEDIR = os.path.join('../example')
+THISDIR = os.path.dirname(__file__)
 
 
 def test_executable_in_path():
@@ -32,6 +34,22 @@ def test_list():
 
     assert len(expected) == 0
 
+
+def test_push():
+    customtag = str(uuid.uuid1())
+    if 'QUAYUSER' in os.environ and 'QUAYTOKEN' in os.environ:
+        subprocess.check_call(['docker','login',
+                               '-u',os.environ['QUAYUSER'],
+                               '-p',os.environ['QUAYTOKEN'],
+                               'quay.io'])
+    subprocess.check_call(['docker-make','testimage','--repo',
+                           'quay.io/avirshup/docker-make-test-push-target:',
+                           '--tag', customtag, '--push'],
+                          cwd=THISDIR)
+
+    subprocess.check_call(['docker','pull',
+                           'quay.io/avirshup/docker-make-test-push-target:testimage-%s' % customtag
+                           ])
 
 def test_example_build():
     subprocess.check_call(

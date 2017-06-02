@@ -110,7 +110,7 @@ def build_targets(args, defs, targets):
             b.write_dockerfile(args.dockerfile_dir)
 
         built.append(b.targetname)
-        if args.push_to_registry and not args.nobuild:
+        if args.push_to_registry and not args.no_build:
             success, w = push(client, b.targetname)
             warnings.extend(w)
             if not success:

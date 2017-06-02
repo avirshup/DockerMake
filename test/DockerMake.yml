@@ -1,0 +1,4 @@
+testimage:
+  FROM: alpine:3.6
+  build: |
+    RUN mkdir /opt && touch /opt/helloworld
