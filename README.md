@@ -2,6 +2,7 @@
 Build and manage stacks of docker images - a dependency graph for Docker images
  
 [![Build Status](https://travis-ci.org/avirshup/DockerMake.svg?branch=master)](https://travis-ci.org/avirshup/DockerMake)
+[![PyPI version](https://badge.fury.io/py/DockerMake.svg)](https://badge.fury.io/py/DockerMake)
 
 Table of Contents
 =================
