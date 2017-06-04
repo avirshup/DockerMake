@@ -51,6 +51,7 @@ def test_push():
                            'quay.io/avirshup/docker-make-test-push-target:testimage-%s' % customtag
                            ])
 
+
 def test_example_build():
     subprocess.check_call(
         "docker-make final --repo myrepo --tag mytag".split(),
@@ -59,6 +60,28 @@ def test_example_build():
     subprocess.check_call(
         "docker run myrepo/final:mytag ls data/AirPassengers.csv data/Puromycin.csv data/file.txt".split(),
         cwd=EXAMPLEDIR)
+
+
+def test_get_console_width_no_stderr_on_failure():
+    # run docker-make with a non-console standard input
+    #   (inspiration from Python's subprocess.py)
+    process = subprocess.Popen(
+            "docker-make final --repo myrepo --tag mytag".split(),
+            cwd=EXAMPLEDIR,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+    try:
+        stdout, stderr = process.communicate("I am not a shell")
+    except:
+        process.kill()
+        process.wait()
+        raise
+    retcode = process.poll()
+    if retcode:
+        raise subprocess.CalledProcessError(retcode, process.args, output=stdout, stderr=stderr)
+
+    assert "ioctl for device" not in stderr
 
 
 TEMPNAME = 'dmtest__python_test'
