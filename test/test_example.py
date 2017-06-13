@@ -71,7 +71,7 @@ def test_push_dockerhub_with_login():
                           cwd=THISDIR)
 
     subprocess.check_call(['docker','pull',
-                           'quay.io/avirshup/docker-make-test-push-target:testimage-%s' % customtag
+                           'docker.io/avirshup/docker-make-test-push-target:testimage-%s' % customtag
                            ])
 
 def test_example_build():
