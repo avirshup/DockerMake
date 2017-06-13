@@ -55,7 +55,6 @@ def test_push_quay_already_logged_in():
                            ])
 
 
-
 def test_push_dockerhub_with_login():
     customtag = str(uuid.uuid1())
     if 'DOCKERUSER' not in os.environ or 'DOCKERTOKEN' not in os.environ:
@@ -75,6 +74,7 @@ def test_push_dockerhub_with_login():
                            'docker.io/avirshup/docker-make-test-push:testimage-%s' % customtag
                            ])
 
+
 def test_example_build():
     subprocess.check_call(
         "docker-make final --repo myrepo --tag mytag".split(),
@@ -88,14 +88,13 @@ def test_example_build():
 def test_get_console_width_no_stderr_on_failure():
     # run docker-make with a non-console standard input
     #   (inspiration from Python's subprocess.py)
-    process = subprocess.Popen(
-            "docker-make final --repo myrepo --tag mytag".split(),
-            cwd=EXAMPLEDIR,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
+    process = subprocess.Popen("docker-make final --repo myrepo --tag mytag".split(),
+                               cwd=EXAMPLEDIR,
+                               stdin=subprocess.PIPE,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
     try:
-        stdout, stderr = process.communicate("I am not a shell")
+        stdout, stderr = process.communicate(b"I am not a shell")
     except:
         process.kill()
         process.wait()
@@ -104,7 +103,7 @@ def test_get_console_width_no_stderr_on_failure():
     if retcode:
         raise subprocess.CalledProcessError(retcode, process.args, output=stdout, stderr=stderr)
 
-    assert "ioctl for device" not in stderr
+    assert b"ioctl for device" not in stderr
 
 
 TEMPNAME = 'dmtest__python_test'
@@ -112,14 +111,12 @@ TEMPNAME = 'dmtest__python_test'
 
 def test_write_then_build(tmpdir):
     tmppath = str(tmpdir)
-    subprocess.check_call(
-            "docker-make -n -p --dockerfile-dir %s python_image" % tmppath,
-            shell=True,
-            cwd=EXAMPLEDIR)
+    subprocess.check_call("docker-make -n -p --dockerfile-dir %s python_image" % tmppath,
+                          shell=True,
+                          cwd=EXAMPLEDIR)
     subprocess.check_call("docker rm %s; docker build . -f Dockerfile.python_image -t %s" % (TEMPNAME, TEMPNAME),
                           shell=True,
                           cwd=tmppath)
-    stdout = subprocess.check_output(
-            "docker run %s python -c 'import pint; print 42'" % TEMPNAME,
-            shell=True)
+    stdout = subprocess.check_output("docker run %s python -c 'import pint; print 42'" % TEMPNAME,
+                                     shell=True)
     assert int(stdout.strip()) == 42
