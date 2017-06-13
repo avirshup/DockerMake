@@ -96,8 +96,15 @@ def build_targets(args, defs, targets):
     else:
         client = get_client_api()
 
-    if args.push_to_registry and args.username:
-        client.login(args.username)
+    if args.push_to_registry and args.registry_user:
+        if not args.repository:
+            raise ValueError('No registry specified to push images to.')
+        registry = args.repository.split('/')[0]
+        client.login(args.registry_user,
+                     password=args.registry_token,
+                     registry=registry,
+                     reauth=True)
+        print("\nREGISTRY LOGIN SUCCESS:",registry)
 
     built, warnings = [], []
     builders = [defs.generate_build(t, generate_name(t, args), rebuilds=args.bust_cache)
