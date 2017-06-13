@@ -140,9 +140,11 @@ eval $(docker-machine env [machine-name])
 ```
 usage: docker-make [-h] [-f MAKEFILE] [-a] [-l]
                    [--requires [REQUIRES [REQUIRES ...]]] [--name NAME] [-p]
-                   [-n] [--pull] [--no-cache] [--bust-cache BUST_CACHE]
-                   [--clear-copy-cache] [--repository REPOSITORY] [--tag TAG]
-                   [--push-to-registry] [--version] [--help-yaml]
+                   [-n] [--dockerfile-dir DOCKERFILE_DIR] [--pull]
+                   [--no-cache] [--bust-cache BUST_CACHE] [--clear-copy-cache]
+                   [--repository REPOSITORY] [--tag TAG] [--push-to-registry]
+                   [--registry-user REGISTRY_USER]
+                   [--registry-token REGISTRY_TOKEN] [--version] [--help-yaml]
                    [TARGETS [TARGETS ...]]
 
 NOTE: Docker environmental variables must be set. For a docker-machine, run
@@ -169,6 +171,9 @@ Dockerfiles:
                         `Dockerfile.[image]`
   -n, --no_build        Only print Dockerfiles, don't build them. Implies
                         --print.
+  --dockerfile-dir DOCKERFILE_DIR
+                        Directory to save dockerfiles in (default:
+                        ./docker_makefiles)
 
 Image caching:
   --pull                Always try to pull updated FROM images
@@ -187,8 +192,8 @@ Repositories and tags:
                         the image as `quay.io/elvis/hello-world`. You can add
                         a ':' to the end to image names into tags: `docker-
                         make -u quay.io/elvis/repo: hello-world` will create
-                        the image in the elvis repository: quay.io/elvis/repo
-                        :hello-world
+                        the image in the elvis repository:
+                        quay.io/elvis/repo:hello-world
   --tag TAG, -t TAG     Tag all built images with this tag. If image names are
                         ALREADY tags (i.e., your repo name ends in a ":"),
                         this will append the tag name with a dash. For
@@ -198,6 +203,12 @@ Repositories and tags:
                         Push all built images to the repository specified
                         (only if image repository contains a URL) -- to push
                         to dockerhub.com, use index.docker.io as the registry)
+  --registry-user REGISTRY_USER, --user REGISTRY_USER
+                        For pushes: log into the registry using this username
+  --registry-token REGISTRY_TOKEN, --token REGISTRY_TOKEN
+                        Token or password to log into registry (optional; uses
+                        $HOME/.dockercfg or $HOME/.docker/config.json if not
+                        passed)
 
 Help:
   --version             Print version and exit.
@@ -205,6 +216,6 @@ Help:
 ```
 
 
-Written by Aaron Virshup, BioNano Group at Autodesk
+By Aaron Virshup, Autodesk Life Sciences
 
 Copyright (c) 2015-2017, Autodesk Inc. Released under the Apache 2.0 License.
