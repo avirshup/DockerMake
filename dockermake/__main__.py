@@ -24,7 +24,6 @@ from .imagedefs import ImageDefs
 
 
 def main():
-
     parser = cli.make_arg_parser()
     args = parser.parse_args()
 
@@ -48,8 +47,6 @@ def main():
         if args.makefile == 'DockerMake.yml':
             print('Type `docker-make --help` to see usage.')
         sys.exit(1)
-
-
 
     defs = ImageDefs(args.makefile)
 

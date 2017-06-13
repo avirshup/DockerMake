@@ -35,13 +35,16 @@ def test_list():
     assert len(expected) == 0
 
 
-def test_push():
+def test_push_quay_already_logged_in():
     customtag = str(uuid.uuid1())
     if 'QUAYUSER' in os.environ and 'QUAYTOKEN' in os.environ:
         subprocess.check_call(['docker','login',
                                '-u',os.environ['QUAYUSER'],
                                '-p',os.environ['QUAYTOKEN'],
                                'quay.io'])
+    else:
+        pytest.skip("Can't test quay push - no login info available")
+
     subprocess.check_call(['docker-make','testimage','--repo',
                            'quay.io/avirshup/docker-make-test-push-target:',
                            '--tag', customtag, '--push'],
@@ -49,6 +52,26 @@ def test_push():
 
     subprocess.check_call(['docker','pull',
                            'quay.io/avirshup/docker-make-test-push-target:testimage-%s' % customtag
+                           ])
+
+
+def test_push_dockerhub_with_login():
+    customtag = str(uuid.uuid1())
+    if 'DOCKERUSER' not in os.environ or 'DOCKERTOKEN' not in os.environ:
+        pytest.skip("Can't test dockerhub push - no login info available")
+
+    USER = os.environ['DOCKERUSER']
+    TOKEN = os.environ['DOCKERTOKEN']
+
+    subprocess.check_call(['docker-make','testimage','--repo',
+                           'docker.io/%s/docker-make-test-push:' % USER,
+                           '--tag', customtag, '--push',
+                           '--user', USER,
+                           '--token', TOKEN],
+                          cwd=THISDIR)
+
+    subprocess.check_call(['docker','pull',
+                           'docker.io/avirshup/docker-make-test-push:testimage-%s' % customtag
                            ])
 
 def test_example_build():
