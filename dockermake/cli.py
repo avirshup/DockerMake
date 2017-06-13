@@ -71,6 +71,9 @@ def make_arg_parser():
                     help='Push all built images to the repository specified '
                          '(only if image repository contains a URL) -- to push to dockerhub.com, '
                          'use index.docker.io as the registry)')
+    rt.add_argument('--username',
+                    help='Log into the registry using this username (requires credentials stored'
+                         'at $HOME/.dockercfg)')
 
     hh = parser.add_argument_group('Help')
     hh.add_argument('--version', action='store_true',

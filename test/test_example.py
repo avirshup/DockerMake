@@ -42,6 +42,9 @@ def test_push():
                                '-u',os.environ['QUAYUSER'],
                                '-p',os.environ['QUAYTOKEN'],
                                'quay.io'])
+    else:
+        pytest.skip("Can't test push - no login info available")
+
     subprocess.check_call(['docker-make','testimage','--repo',
                            'quay.io/avirshup/docker-make-test-push-target:',
                            '--tag', customtag, '--push'],

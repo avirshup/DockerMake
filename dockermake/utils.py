@@ -95,6 +95,10 @@ def build_targets(args, defs, targets):
         client = None
     else:
         client = get_client_api()
+
+    if args.push_to_registry and args.username:
+        client.login(args.username)
+
     built, warnings = [], []
     builders = [defs.generate_build(t, generate_name(t, args), rebuilds=args.bust_cache)
                 for t in targets]
