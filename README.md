@@ -11,7 +11,6 @@ Table of Contents
  * [What you can do with it](#what-you-can-do-with-it)
  * [Example](#example)
  * [Writing DockerMake\.yaml](#writing-dockermakeyaml)
- * [Requirements](#requirements)
  * [Command line usage](#command-line-usage)
 
 
@@ -126,14 +125,6 @@ The idea is to write dockerfile commands for each specific piece of functionalit
 
 [other image name]: [...]
 [...]
-```
-
-
-#### Requirements
-Run `docker-make.py` from wherever you like. You'll need python2.7, pyyaml, docker-py, and access to a docker daemon. If you have pip and a docker-machine, you can run these commands to get set up:
-```bash
-pip install pyyaml docker-py
-eval $(docker-machine env [machine-name])
 ```
 
 ### Command line usage 
