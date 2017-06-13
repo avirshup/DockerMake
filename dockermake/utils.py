@@ -203,7 +203,7 @@ def stream_docker_logs(stream, name):
 
 def get_console_width():
     try:
-        _, consolewidth = map(int, os.popen('stty size', 'r').read().split())
+        _, consolewidth = map(int, os.popen('stty size 2> /dev/null', 'r').read().split())
     except:
         consolewidth = 80
     return consolewidth
