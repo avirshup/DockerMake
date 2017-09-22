@@ -123,6 +123,7 @@ class BuildStep(object):
     def build_external_dockerfile(client, image):
         import docker.errors
         cprint("  Building base image from %s" % image, 'blue')
+        assert not image.built
 
         stream = client.build(path=os.path.dirname(image.path),
                               dockerfile=os.path.basename(image.path),
@@ -136,7 +137,7 @@ class BuildStep(object):
             raise errors.ExternalBuildError(
                     'Error building Dockerfile at %s.  ' % image.path +
                     'Please check it for errors\n. Docker API error message:' + str(e))
-
+        image.built = True
         cprint("  Finished building Dockerfile at %s" % image.path, 'green')
 
 
