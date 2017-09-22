@@ -1,9 +1,9 @@
-data_image:
- FROM: debian:jessie
- build: RUN mkdir /data
+base_image:
+ FROM_DOCKERFILE: ./Dockerfile.base_image
 
 devbase:
- FROM: debian:jessie
+ requires:
+   - base_image
  build: |
   RUN apt-get -y update && apt-get -y install wget
   RUN mkdir -p /opt

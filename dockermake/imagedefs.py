@@ -19,6 +19,7 @@ from builtins import object
 import os
 from collections import OrderedDict
 import yaml
+import uuid
 from future.utils import iteritems
 
 import dockermake.step
@@ -38,6 +39,7 @@ class ImageDefs(object):
     def __init__(self, makefile_path):
         self._sources = set()
         self.makefile_path = makefile_path
+        self.pathroot = os.path.abspath(os.path.dirname(makefile_path))
         print('Working directory: %s' % os.path.abspath(os.curdir))
         print('Copy cache directory: %s' % staging.TMPDIR)
         self.ymldefs = self.parse_yaml(self.makefile_path)
@@ -54,7 +56,7 @@ class ImageDefs(object):
         with open(fname, 'r') as yaml_file:
             yamldefs = yaml.load(yaml_file)
 
-        self._fix_file_paths(filename, yamldefs)
+        self._fix_file_paths(self.pathroot, filename, yamldefs)
 
         sourcedefs = {}
         for s in yamldefs.get('_SOURCES_', []):
@@ -65,11 +67,9 @@ class ImageDefs(object):
         return sourcedefs
 
     @staticmethod
-    def _fix_file_paths(ymlfilepath, yamldefs):
+    def _fix_file_paths(pathroot, ymlfilepath, yamldefs):
         """ Interpret all paths relative the the current yaml file
         """
-        pathroot = os.path.dirname(ymlfilepath)
-
         for field, item in iteritems(yamldefs):
             if field == '_SOURCES_':
                 yamldefs['_SOURCES_'] = [os.path.relpath(_get_abspath(pathroot, p))
@@ -181,8 +181,7 @@ class ImageDefs(object):
 
         if image in stack:
             stack.append(image)
-            raise errors.CircularDependencyError('Circular dependency found:\n' +
-                                                 '->'.join(stack))
+            raise errors.CircularDependencyError('Circular dependency found:\n' + '->'.join(stack))
         stack.append(image)
 
         # Deal with FROM and FROM_DOCKERFILE fields
@@ -193,7 +192,7 @@ class ImageDefs(object):
         if 'FROM' in mydef:
             externalbase = mydef['FROM']
         elif 'FROM_DOCKERFILE' in mydef:
-            path = os.path.abspath(os.path.expanduser(mydef['FROM_DOCKERFILE']))
+            path = _get_abspath(mydef['FROM_DOCKERFILE'], self.pathroot)
             if path not in self._external_dockerfiles:
                 self._external_dockerfiles[path] = ExternalDockerfile(path)
             externalbase = self._external_dockerfiles[path]
@@ -226,15 +225,16 @@ class ExternalDockerfile(object):
     def __init__(self, path):
         self.path = path
         self.built = False
-
-    def build(self):
-        if self.built:
-            return
-
-        raise NotImplementedError()  # TODO: this
+        self.tag = uuid.uuid4()
 
     def __str__(self):
         return "Dockerfile at %s" % self.path
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        else:
+            return self.path == other.path
 
 
 def _get_abspath(pathroot, relpath):

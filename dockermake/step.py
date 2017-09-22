@@ -17,8 +17,10 @@ import os, pprint
 from io import StringIO, BytesIO
 
 import sys
+from termcolor import cprint
 
 from . import utils, staging
+from . import errors
 DOCKER_TMPDIR = '_docker_make_tmp/'
 
 
@@ -27,7 +29,7 @@ class BuildStep(object):
 
     Args:
         imagename (str): name of this image definition
-        baseimage (str): name of the image to inherit from (through "FROM")
+        baseimage (str or ExternalBaseImage): base image for this step
         img_def (dict): yaml definition of this image
         buildname (str): what to call this image, once built
         bust_cache(bool): never use docker cache for this build step
@@ -54,8 +56,13 @@ class BuildStep(object):
             pull (bool): whether to pull dependent layers from remote repositories
             usecache (bool): whether to use cached layers or rebuild from scratch
         """
-        print('     Image definition "%s" from file %s' % (self.imagename,
-                                                           self.sourcefile))
+        from .imagedefs import ExternalDockerfile
+
+        cprint('  Image definition "%s" from file %s' % (self.imagename, self.sourcefile),
+               'blue')
+
+        if isinstance(self.baseimage, ExternalDockerfile) and not self.baseimage.built:
+            self.build_external_dockerfile(client, self.baseimage)
 
         if self.bust_cache:
             usecache = False
@@ -107,6 +114,22 @@ class BuildStep(object):
         with open(temp_df, 'w') as df_out:
             print(dockerfile, file=df_out)
         return tempdir
+
+    @staticmethod
+    def build_external_dockerfile(client, image):
+        import docker.errors
+        cprint("     Building base image from %s" % image, 'blue')
+
+        stream = client.build(path=os.path.dirname(image.path),
+                              dockerfile=os.path.basename(image.path),
+                              tag=image.tag)
+
+        try:
+            utils.stream_docker_logs(stream, image)
+        except (ValueError, docker.errors.APIError) as e:
+            raise errors.ExternalBuildError(
+                    'Error building Dockerfile at %s could not be built.\n' % image.path +
+                    'Please check it for errors. Docker API error message:' + str(e))
 
 
 class FileCopyStep(BuildStep):
