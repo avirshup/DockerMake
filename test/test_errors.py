@@ -10,7 +10,8 @@ ERROR_CODES = {
     'data/conflicting.yml': errors.ConflictingBaseError,
     'data/unrecognized.yml': errors.UnrecognizedKeyError,
     'data/nobase.yml': errors.NoBaseError,
-    'data/missingfile.yml': errors.MissingFileError
+    'data/missingfile.yml': errors.MissingFileError,
+    'data/baddockerfile.yml': errors.ExternalBuildError
 }
 
 

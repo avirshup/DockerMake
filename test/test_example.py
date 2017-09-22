@@ -25,7 +25,7 @@ def test_list():
                                      cwd=EXAMPLEDIR)
 
     expected = set(('airline_data blank_file_build data_image data_science '
-                    'devbase final plant_data python_image').split())
+                    'devbase final plant_data python_image base_image').split())
 
     for line in list(output.splitlines())[4:]:
         image = line[3:].decode('utf-8')
@@ -111,12 +111,9 @@ TEMPNAME = 'dmtest__python_test'
 
 def test_write_then_build(tmpdir):
     tmppath = str(tmpdir)
-    subprocess.check_call("docker-make -n -p --dockerfile-dir %s python_image" % tmppath,
+    subprocess.check_call("docker-make -n -p --dockerfile-dir %s blank_file_build" % tmppath,
                           shell=True,
                           cwd=EXAMPLEDIR)
-    subprocess.check_call("docker rm %s; docker build . -f Dockerfile.python_image -t %s" % (TEMPNAME, TEMPNAME),
+    subprocess.check_call("docker rm %s; docker build . -f Dockerfile.blank_file_build -t %s" % (TEMPNAME, TEMPNAME),
                           shell=True,
                           cwd=tmppath)
-    stdout = subprocess.check_output("docker run %s python -c 'import pint; print 42'" % TEMPNAME,
-                                     shell=True)
-    assert int(stdout.strip()) == 42

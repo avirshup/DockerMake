@@ -18,6 +18,7 @@ Multiple inheritance for your dockerfiles.
 from __future__ import print_function
 import os
 import sys
+import termcolor
 
 from . import cli, utils, staging
 from .imagedefs import ImageDefs
@@ -31,7 +32,8 @@ def main():
     try:
         run(args)
     except errors.UserException as exc:
-        print('FATAL ERROR:', exc.args[0], file=sys.stderr)
+        red_error = termcolor.colored('FATAL ERROR:', 'red')
+        print(red_error, exc.args[0], file=sys.stderr)
         sys.exit(exc.CODE)
 
 
