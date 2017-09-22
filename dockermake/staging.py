@@ -69,6 +69,11 @@ class StagedFile(object):
         # copy build artifacts from the container if necessary
         cachedir = self._setcache(client)
         cacherelpath = os.path.relpath(cachedir, TMPDIR)
+
+        # if cached file doesn't exist (presumably purged by OS), trigger it to be recreated
+        if os.path.exists(cachedir) and not os.path.exists(os.path.join(cachedir, 'content.tar')):
+            shutil.rmtree(cachedir)
+
         if not os.path.exists(cachedir):
             print(' * Creating cache at %s' % cacherelpath)
             container = client.containers.create(self.sourceimage)
