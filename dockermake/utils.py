@@ -21,6 +21,8 @@ import textwrap
 import yaml
 import docker
 
+from . import errors
+
 _dockerclient = None
 
 
@@ -98,7 +100,7 @@ def build_targets(args, defs, targets):
 
     if args.push_to_registry and args.registry_user:
         if not args.repository:
-            raise ValueError('No registry specified to push images to.')
+            raise errors.NoRegistryError('No registry specified to push images to.')
         registry = args.repository.split('/')[0]
         client.login(args.registry_user,
                      password=args.registry_token,

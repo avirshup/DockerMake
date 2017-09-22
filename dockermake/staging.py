@@ -22,6 +22,7 @@ import tempfile
 import shutil
 
 from . import utils
+from . import errors
 
 TMPDIR = tempfile.gettempdir()
 BUILD_CACHEDIR = os.path.join(TMPDIR, 'dmk_cache')
@@ -80,8 +81,9 @@ class StagedFile(object):
             try:
                 tarfile_stream, tarfile_stats = container.get_archive(self.sourcepath)
             except docker.errors.NotFound:
-                raise IOError('File "%s" does not exist in image "%s"!' %
-                              (self.sourcepath, self.sourceimage))
+                raise errors.MissingFileError(
+                        'Cannot copy file "%s" from image "%s" - it does not exist!' %
+                        (self.sourcepath, self.sourceimage))
 
             # write files to disk (would be nice to stream them, haven't gotten it to work)
             tempdir = tempfile.mkdtemp(dir=BUILD_TEMPDIR)

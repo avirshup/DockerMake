@@ -1,4 +1,3 @@
-#!/usr/bin/env python2.7
 # Copyright 2016 Autodesk Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import print_function
+
 from builtins import object
 
 import os
@@ -24,8 +24,10 @@ from future.utils import iteritems
 import dockermake.step
 from . import builds
 from . import staging
+from . import errors
 
-RECOGNIZED_KEYS = set('requires build_directory build copy_from FROM description _sourcefile'
+RECOGNIZED_KEYS = set(('requires build_directory build copy_from FROM description _sourcefile'
+                       ' FROM_DOCKERFILE')
                       .split())
 SPECIAL_FIELDS = set('_ALL_ _SOURCES_'.split())
 
@@ -40,12 +42,13 @@ class ImageDefs(object):
         print('Copy cache directory: %s' % staging.TMPDIR)
         self.ymldefs = self.parse_yaml(self.makefile_path)
         self.all_targets = self.ymldefs.pop('_ALL_', None)
+        self._external_dockerfiles = {}
 
     def parse_yaml(self, filename):
         fname = os.path.expanduser(filename)
         print('READING %s' % os.path.expanduser(fname))
         if fname in self._sources:
-            raise ValueError('Circular _SOURCES_')
+            raise errors.CircularSourcesError('Circular _SOURCES_ in %s' % self.makefile_path)
         self._sources.add(fname)
 
         with open(fname, 'r') as yaml_file:
@@ -85,8 +88,8 @@ class ImageDefs(object):
 
             for key in item:
                 if key not in RECOGNIZED_KEYS:
-                    raise KeyError('Field "%s" in image "%s" not recognized' %
-                                   (key, field))
+                    raise errors.UnrecognizedKeyError('Field "%s" in image "%s" not recognized' %
+                                                      (key, field))
 
     def generate_build(self, image, targetname, rebuilds=None):
         """
@@ -142,6 +145,10 @@ class ImageDefs(object):
         """
         Topologically sort the docker commands by their requirements
 
+        Note:
+            Circular "requires" dependencies are assumed to have already been checked in
+            get_external_base_image, they are not checked here
+
         Args:
            image (str): process this docker image's dependencies
            dependencies (OrderedDict): running cache of sorted dependencies (ordered dict)
@@ -160,19 +167,42 @@ class ImageDefs(object):
 
         for dep in requires:
             self.sort_dependencies(dep, dependencies)
-        if image in dependencies:
-            raise ValueError('Circular dependency found', dependencies)
+
         dependencies[image] = None
         return dependencies.keys()
 
-    def get_external_base_image(self, image):
+    def get_external_base_image(self, image, stack=None):
         """ Makes sure that this image has exactly one external base image
         """
-        externalbase = self.ymldefs[image].get('FROM', None)
+        if stack is None:
+            stack = list()
 
-        for base in self.ymldefs[image].get('requires', []):
+        mydef = self.ymldefs[image]
+
+        if image in stack:
+            stack.append(image)
+            raise errors.CircularDependencyError('Circular dependency found:\n' +
+                                                 '->'.join(stack))
+        stack.append(image)
+
+        # Deal with FROM and FROM_DOCKERFILE fields
+        if 'FROM' in mydef and 'FROM_DOCKERFILE' in mydef:
+            raise errors.MultipleBaseError(
+                    'ERROR: Image "%s" has both a "FROM" and a "FROM_DOCKERFILE" field.' % image +
+                    '       It should have at most ONE of these fields.')
+        if 'FROM' in mydef:
+            externalbase = mydef['FROM']
+        elif 'FROM_DOCKERFILE' in mydef:
+            path = os.path.abspath(os.path.expanduser(mydef['FROM_DOCKERFILE']))
+            if path not in self._external_dockerfiles:
+                self._external_dockerfiles[path] = ExternalDockerfile(path)
+            externalbase = self._external_dockerfiles[path]
+        else:
+            externalbase = None
+
+        for base in mydef.get('requires', []):
             try:
-                otherexternal = self.get_external_base_image(base)
+                otherexternal = self.get_external_base_image(base, stack)
             except ValueError:
                 continue
 
@@ -181,14 +211,30 @@ class ImageDefs(object):
             elif otherexternal is None:
                 continue
             elif externalbase != otherexternal:
-                error = ('Multiple external dependencies: definition "%s" depends on:\n' % image +
-                         '  %s (FROM: %s), and\n' % (image, externalbase) +
-                         '  %s (FROM: %s).' % (base, otherexternal))
-                raise ValueError(error)
+                raise errors.ConflictingBaseError(
+                        'Multiple external dependencies: definition "%s" depends on:\n' % image +
+                        '  %s (FROM: %s), and\n' % (image, externalbase) +
+                        '  %s (FROM: %s).' % (base, otherexternal))
 
         if not externalbase:
-            raise ValueError("No base image found in %s's dependencies" % image)
+            raise errors.NoBaseError("No base image found in %s's dependencies" % image)
+        assert stack.pop() == image
         return externalbase
+
+
+class ExternalDockerfile(object):
+    def __init__(self, path):
+        self.path = path
+        self.built = False
+
+    def build(self):
+        if self.built:
+            return
+
+        raise NotImplementedError()  # TODO: this
+
+    def __str__(self):
+        return "Dockerfile at %s" % self.path
 
 
 def _get_abspath(pathroot, relpath):
