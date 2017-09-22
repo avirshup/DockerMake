@@ -52,3 +52,7 @@ class NoRegistryError(UserException):
 
 class MissingFileError(UserException):
     CODE = 47
+
+
+class ExternalBuildError(UserException):
+    CODE = 48
