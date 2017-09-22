@@ -21,12 +21,30 @@ import sys
 
 from . import cli, utils, staging
 from .imagedefs import ImageDefs
+from . import errors
 
 
 def main():
     parser = cli.make_arg_parser()
     args = parser.parse_args()
 
+    try:
+        run(args)
+    except errors.UserException as exc:
+        print('FATAL ERROR:', exc.args[0], file=sys.stderr)
+        sys.exit(exc.CODE)
+
+
+def _runargs(argstring):
+    """ Entrypoint for debugging
+    """
+    import shlex
+    parser = cli.make_arg_parser()
+    args = parser.parse_args(shlex.split(argstring))
+    run(args)
+
+
+def run(args):
     # print version and exit
     if args.version:
         from . import __version__

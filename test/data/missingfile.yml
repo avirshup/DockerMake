@@ -1,0 +1,10 @@
+base:
+   FROM: alpine
+
+
+target:
+   FROM: alpine
+   description: "tries to copy a non-existent file"
+   copy_from:
+      base:
+        "/opt/blah": "/opt/blah"

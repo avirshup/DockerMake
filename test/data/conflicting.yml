@@ -1,0 +1,10 @@
+baseimage:
+  FROM: a
+
+other_base:
+  FROM_DOCKERFILE: b
+
+target:
+  requires:
+    - baseimage
+    - other_base
