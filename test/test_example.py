@@ -111,12 +111,9 @@ TEMPNAME = 'dmtest__python_test'
 
 def test_write_then_build(tmpdir):
     tmppath = str(tmpdir)
-    subprocess.check_call("docker-make -n -p --dockerfile-dir %s python_image" % tmppath,
+    subprocess.check_call("docker-make -n -p --dockerfile-dir %s blank_file_build" % tmppath,
                           shell=True,
                           cwd=EXAMPLEDIR)
-    subprocess.check_call("docker rm %s; docker build . -f Dockerfile.python_image -t %s" % (TEMPNAME, TEMPNAME),
+    subprocess.check_call("docker rm %s; docker build . -f Dockerfile.blank_file_build -t %s" % (TEMPNAME, TEMPNAME),
                           shell=True,
                           cwd=tmppath)
-    stdout = subprocess.check_output("docker run %s python -c 'import pint; print 42'" % TEMPNAME,
-                                     shell=True)
-    assert int(stdout.strip()) == 42
