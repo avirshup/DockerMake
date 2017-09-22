@@ -16,6 +16,7 @@ from __future__ import print_function
 
 import docker.errors
 from builtins import object
+from termcolor import cprint
 
 import os
 import tempfile
@@ -33,10 +34,10 @@ def clear_copy_cache():
     for path in (BUILD_CACHEDIR, BUILD_TEMPDIR):
         if os.path.exists(path):
             assert os.path.isdir(path), "'%s' is not a directory!"
-            print('Removing docker-make cache %s' % path)
+            cprint('Removing docker-make cache %s' % path, 'yellow')
             shutil.rmtree(path)
         else:
-            print('Cache directory %s does not exist.' % path)
+            cprint('Cache directory %s does not exist.' % path, 'red')
 
 
 class StagedFile(object):
@@ -64,8 +65,9 @@ class StagedFile(object):
         from .step import BuildError
 
         client = utils.get_client()
-        print(' * Copying FROM "%s:/%s" TO "%s://%s/"'%(self.sourceimage, self.sourcepath,
-                                                        startimage, self.destpath))
+        cprint('  Copying file from "%s:/%s" \n                 to "%s://%s/"'
+               % (self.sourceimage, self.sourcepath, startimage, self.destpath),
+               'blue')
 
         # copy build artifacts from the container if necessary
         cachedir = self._setcache(client)
@@ -93,7 +95,7 @@ class StagedFile(object):
             os.mkdir(cachedir)
             os.rename(tempdir, cachedir)
         else:
-            print(' * Using cached files from %s' % cacherelpath)
+            print('  Using cached files from %s' % cacherelpath)
 
         # write Dockerfile for the new image and then build it
         dockerfile = 'FROM %s\nADD content.tar %s' % (startimage, self.destpath)
