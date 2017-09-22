@@ -1,2 +1,2 @@
 FROM debian:jessie
-RUN mkdir /data
+RUN echo "This is an example image for DockerMake" >> /README.txt

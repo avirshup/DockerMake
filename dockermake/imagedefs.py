@@ -102,6 +102,12 @@ class ImageDefs(object):
             rebuilds (List[str]): list of image layers to rebuild (i.e., without docker's cache)
         """
         from_image = self.get_external_base_image(image)
+        if isinstance(from_image, ExternalDockerfile):
+            build_first = from_image
+            base_image = from_image.tag
+        else:
+            base_image = from_image
+            build_first = None
         build_steps = []
         istep = 0
         sourceimages = set()
@@ -110,7 +116,6 @@ class ImageDefs(object):
         else:
             rebuilds = set(rebuilds)
 
-        base_image = from_image
         for base_name in self.sort_dependencies(image):
             istep += 1
             buildname = 'dmkbuild_%s_%d' % (image, istep)
@@ -118,8 +123,10 @@ class ImageDefs(object):
                                                          base_image,
                                                          self.ymldefs[base_name],
                                                          buildname,
-                                                         bust_cache=base_name in rebuilds))
+                                                         bust_cache=base_name in rebuilds,
+                                                         build_first=build_first))
             base_image = buildname
+            build_first = None
 
             for sourceimage, files in iteritems(self.ymldefs[base_name].get('copy_from', {})):
                 sourceimages.add(sourceimage)
@@ -192,7 +199,7 @@ class ImageDefs(object):
         if 'FROM' in mydef:
             externalbase = mydef['FROM']
         elif 'FROM_DOCKERFILE' in mydef:
-            path = _get_abspath(mydef['FROM_DOCKERFILE'], self.pathroot)
+            path = _get_abspath(self.pathroot, mydef['FROM_DOCKERFILE'])
             if path not in self._external_dockerfiles:
                 self._external_dockerfiles[path] = ExternalDockerfile(path)
             externalbase = self._external_dockerfiles[path]

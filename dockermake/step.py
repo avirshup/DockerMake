@@ -13,13 +13,15 @@
 # limitations under the License.
 from __future__ import print_function
 
-import os, pprint
+import os
+import pprint
 from io import StringIO, BytesIO
 
 import sys
 from termcolor import cprint
 
-from . import utils, staging
+from . import utils
+from . import staging
 from . import errors
 DOCKER_TMPDIR = '_docker_make_tmp/'
 
@@ -29,13 +31,14 @@ class BuildStep(object):
 
     Args:
         imagename (str): name of this image definition
-        baseimage (str or ExternalBaseImage): base image for this step
+        baseimage (str): base image for this step
         img_def (dict): yaml definition of this image
         buildname (str): what to call this image, once built
         bust_cache(bool): never use docker cache for this build step
     """
 
-    def __init__(self, imagename, baseimage, img_def, buildname, bust_cache=False):
+    def __init__(self, imagename, baseimage, img_def, buildname,
+                 build_first=None, bust_cache=False):
         self.imagename = imagename
         self.baseimage = baseimage
         self.dockerfile_lines = ['FROM %s\n' % baseimage,
@@ -44,6 +47,7 @@ class BuildStep(object):
         self.build_dir = img_def.get('build_directory', None)
         self.bust_cache = bust_cache
         self.sourcefile = img_def['_sourcefile']
+        self.build_first = build_first
 
     def build(self, client, pull=False, usecache=True):
         """
@@ -61,8 +65,8 @@ class BuildStep(object):
         cprint('  Image definition "%s" from file %s' % (self.imagename, self.sourcefile),
                'blue')
 
-        if isinstance(self.baseimage, ExternalDockerfile) and not self.baseimage.built:
-            self.build_external_dockerfile(client, self.baseimage)
+        if self.build_first and not self.build_first.built:
+            self.build_external_dockerfile(client, self.build_first)
 
         if self.bust_cache:
             usecache = False
@@ -118,18 +122,22 @@ class BuildStep(object):
     @staticmethod
     def build_external_dockerfile(client, image):
         import docker.errors
-        cprint("     Building base image from %s" % image, 'blue')
+        cprint("  Building base image from %s" % image, 'blue')
 
         stream = client.build(path=os.path.dirname(image.path),
                               dockerfile=os.path.basename(image.path),
-                              tag=image.tag)
+                              tag=image.tag,
+                              decode=True,
+                              rm=True)
 
         try:
             utils.stream_docker_logs(stream, image)
         except (ValueError, docker.errors.APIError) as e:
             raise errors.ExternalBuildError(
-                    'Error building Dockerfile at %s could not be built.\n' % image.path +
-                    'Please check it for errors. Docker API error message:' + str(e))
+                    'Error building Dockerfile at %s.  ' % image.path +
+                    'Please check it for errors\n. Docker API error message:' + str(e))
+
+        cprint("  Finished building Dockerfile at %s" % image.path, 'green')
 
 
 class FileCopyStep(BuildStep):
@@ -164,11 +172,8 @@ class FileCopyStep(BuildStep):
             `pull` and `usecache` are for compatibility only. They're irrelevant because
             hey were applied when BUILDING self.sourceimage
         """
-        print('     File copy from "%s", defined in file %s' % (self.definitionname, self.sourcefile))
         stage = staging.StagedFile(self.sourceimage, self.sourcepath, self.destpath)
         stage.stage(self.base_image, self.buildname)
-
-
 
 
 class BuildError(Exception):

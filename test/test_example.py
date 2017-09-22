@@ -25,7 +25,7 @@ def test_list():
                                      cwd=EXAMPLEDIR)
 
     expected = set(('airline_data blank_file_build data_image data_science '
-                    'devbase final plant_data python_image').split())
+                    'devbase final plant_data python_image base_image').split())
 
     for line in list(output.splitlines())[4:]:
         image = line[3:].decode('utf-8')

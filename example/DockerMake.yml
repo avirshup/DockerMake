@@ -8,6 +8,12 @@ devbase:
   RUN apt-get -y update && apt-get -y install wget
   RUN mkdir -p /opt
 
+data_image:
+ requires:
+  - base_image
+ build: |
+  RUN mkdir /data
+
 airline_data:
  requires:
   - data_image
