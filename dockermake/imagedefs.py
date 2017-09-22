@@ -181,7 +181,7 @@ class ImageDefs(object):
             elif otherexternal is None:
                 continue
             elif externalbase != otherexternal:
-                error = ('Multiple external dependencies: depends on:\n' % image +
+                error = ('Multiple external dependencies: definition "%s" depends on:\n' % image +
                          '  %s (FROM: %s), and\n' % (image, externalbase) +
                          '  %s (FROM: %s).' % (base, otherexternal))
                 raise ValueError(error)
