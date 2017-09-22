@@ -153,4 +153,4 @@ def _centered(s, w):
     if leftover < 0:
         return s
     else:
-        return ' '*(leftover/2) + s
+        return ' '*(leftover//2) + s
