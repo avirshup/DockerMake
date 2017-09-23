@@ -15,6 +15,7 @@ from __future__ import print_function
 
 import os
 from builtins import object
+from termcolor import cprint
 
 from dockermake.step import FileCopyStep
 from . import utils
@@ -51,14 +52,10 @@ class BuildTarget(object):
                 lines.extend(step.dockerfile_lines)
             else:
                 lines.extend(step.dockerfile_lines[1:])
-
         path = os.path.join(output_dir, 'Dockerfile.%s' % self.imagename)
-
         with open(path, 'w') as outfile:
             outfile.write('\n'.join(lines))
-
         print('Wrote %s' % path)
-
 
     def build(self, client,
               nobuild=False,
@@ -80,14 +77,18 @@ class BuildTarget(object):
                                       usecache=usecache,
                                       pull=pull)
 
-        print('\n' + '-'*utils.get_console_width())
-        print('       STARTING BUILD for "%s" (image definition "%s" from %s)\n' % (
-            self.targetname, self.imagename, self.steps[-1].sourcefile))
+        width = utils.get_console_width()
+        cprint('\n' + '='*width,
+               color='white', attrs=['bold'])
+
+        line = 'STARTING BUILD for "%s" (image definition "%s" from %s)\n' % (
+            self.targetname, self.imagename, self.steps[-1].sourcefile)
+
+        cprint(_centered(line, width), color='blue', attrs=['bold'])
 
         for istep, step in enumerate(self.steps):
-            print(' * Building %s, Step %d/%d:' % (self.imagename,
-                                                 istep+1,
-                                                 len(self.steps)))
+            cprint('* Building image "%s", Step %d/%d:' % (self.imagename, istep+1, len(self.steps)),
+                   color='blue')
 
             if not nobuild:
                 if step.bust_cache:
@@ -96,7 +97,8 @@ class BuildTarget(object):
                         step.bust_cache = False
 
                 step.build(client, usecache=usecache)
-                print("   - Created intermediate image %s\n" % step.buildname)
+                cprint("* Created intermediate image \"%s\"\n" % step.buildname,
+                       'green')
 
                 if step.bust_cache:
                     _rebuilt.add(stackkey)
@@ -105,7 +107,11 @@ class BuildTarget(object):
 
         if not nobuild:
             self.finalizenames(client, finalimage, keepbuildtags)
-            print(' *** Successfully built image %s\n' % self.targetname)
+            line = 'FINISHED BUILDING "%s" (image definition "%s" from %s)'%(
+                self.targetname, self.imagename, self.steps[-1].sourcefile)
+            cprint(_centered(line, width),
+                   color='green', attrs=['bold'])
+            cprint('=' * width, color='white', attrs=['bold'], end='\n\n')
 
     def _get_stack_key(self, istep):
         names = [self.from_image]
@@ -120,20 +126,31 @@ class BuildTarget(object):
         for build in self.sourcebuilds:
             if build.targetname in _updated_staging_images:
                 continue
-            print('\nUpdating source image %s' % build.targetname)
+            cprint('\nUpdating source image %s' % build.targetname,
+                   'blue')
             build.build(client,
                         usecache=usecache,
                         pull=pull)
-            print(' *** Done with source image %s\n' % build.targetname)
+            cprint('Finished with build image "%s"\n' % build.targetname,
+                   color='green')
 
     def finalizenames(self, client, finalimage, keepbuildtags):
         """ Tag the built image with its final name and untag intermediate containers
         """
         client.tag(finalimage, *self.targetname.split(':'))
-        print('Tagged final image as %s' % self.targetname)
+        cprint('Tagged final image as "%s"' % self.targetname,
+               'green')
         if not keepbuildtags:
             print('Untagging intermediate containers:', end='')
             for step in self.steps:
                 client.remove_image(step.buildname, force=True)
                 print(step.buildname, end=',')
             print()
+
+
+def _centered(s, w):
+    leftover = w - len(s)
+    if leftover < 0:
+        return s
+    else:
+        return ' '*(leftover//2) + s
