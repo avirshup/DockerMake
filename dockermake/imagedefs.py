@@ -102,6 +102,8 @@ class ImageDefs(object):
             rebuilds (List[str]): list of image layers to rebuild (i.e., without docker's cache)
         """
         from_image = self.get_external_base_image(image)
+        if from_image is None:
+            raise errors.NoBaseError("No base image found in %s's dependencies" % image)
         if isinstance(from_image, ExternalDockerfile):
             build_first = from_image
             base_image = from_image.tag
@@ -170,7 +172,6 @@ class ImageDefs(object):
             return
 
         requires = self.ymldefs[image].get('requires', [])
-        assert type(requires) == list, 'Requirements for %s are not a list' % image
 
         for dep in requires:
             self.sort_dependencies(dep, dependencies)
@@ -206,7 +207,12 @@ class ImageDefs(object):
         else:
             externalbase = None
 
-        for base in mydef.get('requires', []):
+        requires = mydef.get('requires', [])
+        for base in requires:
+            if not isinstance(requires, list):
+                raise errors.InvalidRequiresList('Requirements for image "%s" are not a list'
+                                                 % image)
+
             try:
                 otherexternal = self.get_external_base_image(base, stack)
             except ValueError:
@@ -222,8 +228,6 @@ class ImageDefs(object):
                         '  %s (FROM: %s), and\n' % (image, externalbase) +
                         '  %s (FROM: %s).' % (base, otherexternal))
 
-        if not externalbase:
-            raise errors.NoBaseError("No base image found in %s's dependencies" % image)
         assert stack.pop() == image
         return externalbase
 

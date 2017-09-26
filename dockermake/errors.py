@@ -56,3 +56,7 @@ class MissingFileError(UserException):
 
 class ExternalBuildError(UserException):
     CODE = 48
+
+
+class InvalidRequiresList(UserException):
+    CODE = 49
