@@ -1,5 +1,5 @@
 target:
   description: this build should fail because its 'requires' field is not a list
-  FROM: x
-  requires: y
+  FROM: debian:jessie
+  requires: yabsdfa
   build: z

@@ -172,7 +172,6 @@ class ImageDefs(object):
             return
 
         requires = self.ymldefs[image].get('requires', [])
-        assert type(requires) == list, 'Requirements for %s are not a list' % image
 
         for dep in requires:
             self.sort_dependencies(dep, dependencies)
@@ -208,7 +207,12 @@ class ImageDefs(object):
         else:
             externalbase = None
 
-        for base in mydef.get('requires', []):
+        requires = mydef.get('requires', [])
+        for base in requires:
+            if not isinstance(requires, list):
+                raise errors.InvalidRequiresList('Requirements for image "%s" are not a list'
+                                                 % image)
+
             try:
                 otherexternal = self.get_external_base_image(base, stack)
             except ValueError:
