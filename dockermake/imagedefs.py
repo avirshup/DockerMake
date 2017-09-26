@@ -102,6 +102,8 @@ class ImageDefs(object):
             rebuilds (List[str]): list of image layers to rebuild (i.e., without docker's cache)
         """
         from_image = self.get_external_base_image(image)
+        if from_image is None:
+            raise errors.NoBaseError("No base image found in %s's dependencies" % image)
         if isinstance(from_image, ExternalDockerfile):
             build_first = from_image
             base_image = from_image.tag
@@ -222,8 +224,6 @@ class ImageDefs(object):
                         '  %s (FROM: %s), and\n' % (image, externalbase) +
                         '  %s (FROM: %s).' % (base, otherexternal))
 
-        if not externalbase:
-            raise errors.NoBaseError("No base image found in %s's dependencies" % image)
         assert stack.pop() == image
         return externalbase
 
