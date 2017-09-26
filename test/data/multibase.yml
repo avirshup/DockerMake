@@ -1,0 +1,22 @@
+base3:
+  FROM: continuumio/miniconda3
+
+base2:
+  FROM: continuumio/miniconda
+
+install_something:
+  description: "Not really java :)"
+  build: |
+    RUN mkdir -p /opt/java8
+    RUN touch /opt/java8/java
+
+target3:
+  requires:
+    - install_something
+  FROM: continuumio/miniconda3
+
+target2:
+  requires:
+    - install_something
+    - base2
+
