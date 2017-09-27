@@ -1,0 +1,8 @@
+target:
+  FROM: alpine
+  build_directory: ./test_build
+  ignore: |
+    b
+  build: |
+    ADD . /opt
+

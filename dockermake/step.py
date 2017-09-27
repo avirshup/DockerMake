@@ -16,9 +16,10 @@ from __future__ import print_function
 import os
 import pprint
 from io import StringIO, BytesIO
-
 import sys
-from termcolor import cprint
+
+from termcolor import cprint, colored
+import docker.utils
 
 from . import utils
 from . import staging
@@ -41,13 +42,30 @@ class BuildStep(object):
                  build_first=None, bust_cache=False):
         self.imagename = imagename
         self.baseimage = baseimage
-        self.dockerfile_lines = ['FROM %s\n' % baseimage,
-                                 img_def.get('build', '')]
+        self.dockerfile_lines = ['FROM %s\n' % baseimage, img_def.get('build', '')]
         self.buildname = buildname
         self.build_dir = img_def.get('build_directory', None)
         self.bust_cache = bust_cache
         self.sourcefile = img_def['_sourcefile']
         self.build_first = build_first
+        self.custom_exclude = self._get_ignorefile(img_def)
+        self.ignoredefs_file = img_def.get('ignorefile', img_def['_sourcefile'])
+
+    @staticmethod
+    def _get_ignorefile(img_def):
+        if img_def.get('ignore', None) is not None:
+            assert 'ignorefile' not in img_def
+            lines = img_def['ignore'].splitlines()
+        elif img_def.get('ignorefile', None) is not None:
+            assert 'ignore' not in img_def
+            with open(img_def['ignorefile'], 'r') as igfile:
+                lines = list(igfile)
+        else:
+            return None
+
+        lines.append('_docker_make_tmp')
+
+        return list(filter(bool, lines))
 
     def build(self, client, pull=False, usecache=True):
         """
@@ -60,10 +78,10 @@ class BuildStep(object):
             pull (bool): whether to pull dependent layers from remote repositories
             usecache (bool): whether to use cached layers or rebuild from scratch
         """
-        from .imagedefs import ExternalDockerfile
-
-        cprint('  Image definition "%s" from file %s' % (self.imagename, self.sourcefile),
-               'blue')
+        print(colored('  Building step', 'blue'),
+              colored(self.imagename, 'blue', attrs=['bold']),
+              colored('defined in', 'blue'),
+              colored(self.sourcefile, 'blue', attrs=['bold']))
 
         if self.build_first and not self.build_first.built:
             self.build_external_dockerfile(client, self.build_first)
@@ -83,9 +101,24 @@ class BuildStep(object):
 
         if self.build_dir is not None:
             tempdir = self.write_dockerfile(dockerfile)
+            context_path = os.path.abspath(os.path.expanduser(self.build_dir))
             build_args.update(fileobj=None,
-                              path=os.path.abspath(os.path.expanduser(self.build_dir)),
                               dockerfile=os.path.join(DOCKER_TMPDIR, 'Dockerfile'))
+            print(colored('  Build context:', 'blue'),
+                  colored(os.path.relpath(context_path), 'blue', attrs=['bold']))
+
+            if not self.custom_exclude:
+                build_args.update(path=context_path)
+            else:
+                print(colored('  Custom .dockerignore from:','blue'),
+                      colored(os.path.relpath(self.ignoredefs_file),  'blue', attrs=['bold']))
+                context = docker.utils.tar(self.build_dir,
+                                           exclude=self.custom_exclude,
+                                           dockerfile=os.path.join(DOCKER_TMPDIR, 'Dockerfile'),
+                                           gzip=False)
+                build_args.update(fileobj=context,
+                                  custom_context=True)
+
         else:
             if sys.version_info.major == 2:
                 build_args.update(fileobj=StringIO(dockerfile),

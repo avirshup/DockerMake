@@ -109,9 +109,9 @@ def print_yaml_help():
                         'piece of functionality in the build field, and "inherit" all other'
                         ' functionality from a list of other components that your image requires. '
                         'If you need to add files with the ADD and COPY commands, specify the root'
-                        ' directory for those files with build_directory. Your tree of '
+                        ' directory for those files with `build_directory`. Your tree of '
                         '"requires" must have exactly one unique named base image '
-                        'in the FROM field.'))
+                        'in the FROM or FROM_DOCKERFILE field.'))
 
     print('\n\nAN EXAMPLE:')
     print(printable_code("""devbase:

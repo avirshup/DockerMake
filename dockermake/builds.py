@@ -15,7 +15,7 @@ from __future__ import print_function
 
 import os
 from builtins import object
-from termcolor import cprint
+from termcolor import cprint, colored
 
 from dockermake.step import FileCopyStep
 from . import utils
@@ -33,7 +33,7 @@ class BuildTarget(object):
         targetname (str): name to assign the final built image
         steps (List[BuildStep]): list of steps required to build this image
         stagedfiles (List[StagedFile]): list of files to stage into this image from other images
-        from_iamge (str): External base image name
+        from_image (str): External base image name
     """
     def __init__(self, imagename, targetname, steps, sourcebuilds, from_image):
         self.imagename = imagename
@@ -87,8 +87,10 @@ class BuildTarget(object):
         cprint(_centered(line, width), color='blue', attrs=['bold'])
 
         for istep, step in enumerate(self.steps):
-            cprint('* Building image "%s", Step %d/%d:' % (self.imagename, istep+1, len(self.steps)),
-                   color='blue')
+            print(colored('* Step','blue'),
+                  colored('%d/%d' % (istep+1, len(self.steps)), 'blue', attrs=['bold']),
+                  colored('for image', color='blue'),
+                  colored(self.imagename, color='blue', attrs=['bold']))
 
             if not nobuild:
                 if step.bust_cache:
@@ -97,8 +99,9 @@ class BuildTarget(object):
                         step.bust_cache = False
 
                 step.build(client, usecache=usecache)
-                cprint("* Created intermediate image \"%s\"\n" % step.buildname,
-                       'green')
+                print(colored("* Created intermediate image", 'green'),
+                      colored(step.buildname, 'green', attrs=['bold']),
+                      end='\n\n')
 
                 if step.bust_cache:
                     _rebuilt.add(stackkey)
