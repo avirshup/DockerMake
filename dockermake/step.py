@@ -16,9 +16,10 @@ from __future__ import print_function
 import os
 import pprint
 from io import StringIO, BytesIO
-
 import sys
-from termcolor import cprint
+
+from termcolor import cprint, colored
+import docker.utils
 
 from . import utils
 from . import staging
@@ -41,8 +42,7 @@ class BuildStep(object):
                  build_first=None, bust_cache=False):
         self.imagename = imagename
         self.baseimage = baseimage
-        self.dockerfile_lines = ['FROM %s\n' % baseimage,
-                                 img_def.get('build', '')]
+        self.dockerfile_lines = ['FROM %s\n' % baseimage, img_def.get('build', '')]
         self.buildname = buildname
         self.build_dir = img_def.get('build_directory', None)
         self.bust_cache = bust_cache
@@ -78,9 +78,10 @@ class BuildStep(object):
             pull (bool): whether to pull dependent layers from remote repositories
             usecache (bool): whether to use cached layers or rebuild from scratch
         """
-
-        cprint('  Image definition "%s" from file %s' % (self.imagename, self.sourcefile),
-               'blue')
+        print(colored('  Building step', 'blue'),
+              colored(self.imagename, 'blue', attrs=['bold']),
+              colored('defined in', 'blue'),
+              colored(self.sourcefile, 'blue', attrs=['bold']))
 
         if self.build_first and not self.build_first.built:
             self.build_external_dockerfile(client, self.build_first)
