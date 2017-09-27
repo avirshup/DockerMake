@@ -39,10 +39,16 @@ class ImageDefs(object):
     def __init__(self, makefile_path):
         self._sources = set()
         self.makefile_path = makefile_path
-        self.pathroot = os.path.abspath(os.path.dirname(makefile_path))
         print('Working directory: %s' % os.path.abspath(os.curdir))
         print('Copy cache directory: %s' % staging.TMPDIR)
-        self.ymldefs = self.parse_yaml(self.makefile_path)
+        try:
+            self.ymldefs = self.parse_yaml(self.makefile_path)
+        except Exception as exc:
+            if isinstance(exc, errors.UserException):
+                raise
+            else:
+                raise errors.ParsingFailure('Failed to read file %s:\n' % self.makefile_path +
+                                            str(exc))
         self.all_targets = self.ymldefs.pop('_ALL_', None)
         self._external_dockerfiles = {}
 
@@ -56,7 +62,7 @@ class ImageDefs(object):
         with open(fname, 'r') as yaml_file:
             yamldefs = yaml.load(yaml_file)
 
-        self._fix_file_paths(self.pathroot, filename, yamldefs)
+        self._fix_file_paths(filename, yamldefs)
 
         sourcedefs = {}
         for s in yamldefs.get('_SOURCES_', []):
@@ -67,9 +73,16 @@ class ImageDefs(object):
         return sourcedefs
 
     @staticmethod
-    def _fix_file_paths(pathroot, ymlfilepath, yamldefs):
+    def _fix_file_paths(ymlfilepath, yamldefs):
         """ Interpret all paths relative the the current yaml file
+
+        Note: this also checks the validity of all keys
         """
+        relpath = os.path.relpath(ymlfilepath)
+        if '/' not in relpath:
+            relpath = './%s' % relpath
+        pathroot = os.path.abspath(os.path.dirname(ymlfilepath))
+
         for field, item in iteritems(yamldefs):
             if field == '_SOURCES_':
                 yamldefs['_SOURCES_'] = [os.path.relpath(_get_abspath(pathroot, p))
@@ -77,14 +90,13 @@ class ImageDefs(object):
                 continue
             elif field in SPECIAL_FIELDS:
                 continue
-            elif 'build_directory' in item:
-                item['build_directory'] = _get_abspath(pathroot, item['build_directory'])
+
+            for key in ('build_directory', 'FROM_DOCKERFILE'):
+                if key in item:
+                    item[key] = _get_abspath(pathroot, item[key])
 
             # save the file path for logging
-            f = os.path.relpath(ymlfilepath)
-            if '/' not in f:
-                f = './%s' % f
-            item['_sourcefile'] = f
+            item['_sourcefile'] = relpath
 
             for key in item:
                 if key not in RECOGNIZED_KEYS:
@@ -200,7 +212,7 @@ class ImageDefs(object):
         if 'FROM' in mydef:
             externalbase = mydef['FROM']
         elif 'FROM_DOCKERFILE' in mydef:
-            path = _get_abspath(self.pathroot, mydef['FROM_DOCKERFILE'])
+            path = mydef['FROM_DOCKERFILE']
             if path not in self._external_dockerfiles:
                 self._external_dockerfiles[path] = ExternalDockerfile(path)
             externalbase = self._external_dockerfiles[path]
@@ -208,11 +220,10 @@ class ImageDefs(object):
             externalbase = None
 
         requires = mydef.get('requires', [])
-        for base in requires:
-            if not isinstance(requires, list):
-                raise errors.InvalidRequiresList('Requirements for image "%s" are not a list'
-                                                 % image)
+        if not isinstance(requires, list):
+            raise errors.InvalidRequiresList('Requirements for image "%s" are not a list' % image)
 
+        for base in requires:
             try:
                 otherexternal = self.get_external_base_image(base, stack)
             except ValueError:

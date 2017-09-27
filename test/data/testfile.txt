@@ -1,0 +1,1 @@
+this is a file used in tests for relative path resolution

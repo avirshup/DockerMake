@@ -13,6 +13,7 @@ ERROR_CODES = {
     'data/missingfile.yml': errors.MissingFileError,
     'data/baddockerfile.yml': errors.ExternalBuildError,
     'data/invalid_requires.yml': errors.InvalidRequiresList,
+    'data/invalid_yaml.yml': errors.ParsingFailure
 }
 
 

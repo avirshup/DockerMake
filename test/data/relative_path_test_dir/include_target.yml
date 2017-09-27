@@ -1,0 +1,5 @@
+target:
+  FROM: debian:jessie
+  build_directory: ../
+  build:
+    COPY testfile.txt /opt/testfile.txt
