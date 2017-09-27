@@ -60,3 +60,7 @@ class ExternalBuildError(UserException):
 
 class InvalidRequiresList(UserException):
     CODE = 49
+
+
+class ParsingFailure(UserException):
+    CODE = 50

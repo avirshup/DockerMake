@@ -42,7 +42,14 @@ class ImageDefs(object):
         self.pathroot = os.path.abspath(os.path.dirname(makefile_path))
         print('Working directory: %s' % os.path.abspath(os.curdir))
         print('Copy cache directory: %s' % staging.TMPDIR)
-        self.ymldefs = self.parse_yaml(self.makefile_path)
+        try:
+            self.ymldefs = self.parse_yaml(self.makefile_path)
+        except Exception as exc:
+            if isinstance(exc, errors.UserException):
+                raise
+            else:
+                raise errors.ParsingFailure('Failed to read file %s:\n' % self.makefile_path +
+                                            str(exc))
         self.all_targets = self.ymldefs.pop('_ALL_', None)
         self._external_dockerfiles = {}
 
@@ -208,11 +215,10 @@ class ImageDefs(object):
             externalbase = None
 
         requires = mydef.get('requires', [])
-        for base in requires:
-            if not isinstance(requires, list):
-                raise errors.InvalidRequiresList('Requirements for image "%s" are not a list'
-                                                 % image)
+        if not isinstance(requires, list):
+            raise errors.InvalidRequiresList('Requirements for image "%s" are not a list' % image)
 
+        for base in requires:
             try:
                 otherexternal = self.get_external_base_image(base, stack)
             except ValueError:
