@@ -48,6 +48,24 @@ class BuildStep(object):
         self.bust_cache = bust_cache
         self.sourcefile = img_def['_sourcefile']
         self.build_first = build_first
+        self.custom_exclude = self._get_ignorefile(img_def)
+        self.ignoredefs_file = img_def.get('ignorefile', img_def['_sourcefile'])
+
+    @staticmethod
+    def _get_ignorefile(img_def):
+        if img_def.get('ignore', None) is not None:
+            assert 'ignorefile' not in img_def
+            lines = img_def['ignore'].splitlines()
+        elif img_def.get('ignorefile', None) is not None:
+            assert 'ignore' not in img_def
+            with open(img_def['ignorefile'], 'r') as igfile:
+                lines = list(igfile)
+        else:
+            return None
+
+        lines.append('_docker_make_tmp')
+
+        return list(filter(bool, lines))
 
     def build(self, client, pull=False, usecache=True):
         """
@@ -60,7 +78,6 @@ class BuildStep(object):
             pull (bool): whether to pull dependent layers from remote repositories
             usecache (bool): whether to use cached layers or rebuild from scratch
         """
-        from .imagedefs import ExternalDockerfile
 
         cprint('  Image definition "%s" from file %s' % (self.imagename, self.sourcefile),
                'blue')
@@ -83,9 +100,24 @@ class BuildStep(object):
 
         if self.build_dir is not None:
             tempdir = self.write_dockerfile(dockerfile)
+            context_path = os.path.abspath(os.path.expanduser(self.build_dir))
             build_args.update(fileobj=None,
-                              path=os.path.abspath(os.path.expanduser(self.build_dir)),
                               dockerfile=os.path.join(DOCKER_TMPDIR, 'Dockerfile'))
+            print(colored('  Build context:', 'blue'),
+                  colored(os.path.relpath(context_path), 'blue', attrs=['bold']))
+
+            if not self.custom_exclude:
+                build_args.update(path=context_path)
+            else:
+                print(colored('  Custom .dockerignore from:','blue'),
+                      colored(os.path.relpath(self.ignoredefs_file),  'blue', attrs=['bold']))
+                context = docker.utils.tar(self.build_dir,
+                                           exclude=self.custom_exclude,
+                                           dockerfile=os.path.join(DOCKER_TMPDIR, 'Dockerfile'),
+                                           gzip=False)
+                build_args.update(fileobj=context,
+                                  custom_context=True)
+
         else:
             if sys.version_info.major == 2:
                 build_args.update(fileobj=StringIO(dockerfile),
