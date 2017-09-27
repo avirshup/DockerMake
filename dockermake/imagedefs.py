@@ -97,8 +97,9 @@ class ImageDefs(object):
             defn['_sourcefile'] = relpath
 
             if 'ignore' in defn and 'ignorefile' in defn:
-                raise errors.MultipleIgnoreError('Image "%s" has both "ignore" AND "ignorefile"'
-                                                 ' fields. At most ONE of these should be defined')
+                raise errors.MultipleIgnoreError(
+                        'Image "%s" has both "ignore" AND "ignorefile" fields.' % imagename +
+                        ' At most ONE of these should be defined')
 
             for key in defn:
                 if key not in RECOGNIZED_KEYS:

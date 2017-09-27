@@ -14,7 +14,7 @@ ERROR_CODES = {
     'data/baddockerfile.yml': errors.ExternalBuildError,
     'data/invalid_requires.yml': errors.InvalidRequiresList,
     'data/invalid_yaml.yml': errors.ParsingFailure,
-    'data/multi_ignore': errors.MultipleIgnoreError,
+    'data/multi_ignore.yml': errors.MultipleIgnoreError,
 }
 
 
