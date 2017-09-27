@@ -1,0 +1,4 @@
+target:
+  description: should error because you can't have both of these
+  ignore: a
+  ignorefile: test_build/.dockerignore

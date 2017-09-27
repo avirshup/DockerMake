@@ -1,0 +1,5 @@
+target:
+  FROM: alpine
+  ignorefile: test_build/custom_ignore_file.txt
+  build_directory: ./test_build
+  build: ADD . /opt
