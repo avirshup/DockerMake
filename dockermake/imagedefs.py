@@ -28,7 +28,7 @@ from . import staging
 from . import errors
 
 RECOGNIZED_KEYS = set(('requires build_directory build copy_from FROM description _sourcefile'
-                       ' FROM_DOCKERFILE')
+                       ' FROM_DOCKERFILE ignore ignorefile')
                       .split())
 SPECIAL_FIELDS = set('_ALL_ _SOURCES_'.split())
 
@@ -62,7 +62,7 @@ class ImageDefs(object):
         with open(fname, 'r') as yaml_file:
             yamldefs = yaml.load(yaml_file)
 
-        self._fix_file_paths(filename, yamldefs)
+        self._check_yaml_and_paths(filename, yamldefs)
 
         sourcedefs = {}
         for s in yamldefs.get('_SOURCES_', []):
@@ -73,35 +73,38 @@ class ImageDefs(object):
         return sourcedefs
 
     @staticmethod
-    def _fix_file_paths(ymlfilepath, yamldefs):
-        """ Interpret all paths relative the the current yaml file
-
-        Note: this also checks the validity of all keys
+    def _check_yaml_and_paths(ymlfilepath, yamldefs):
+        """ Checks YAML for errors and resolves all paths
         """
         relpath = os.path.relpath(ymlfilepath)
         if '/' not in relpath:
             relpath = './%s' % relpath
         pathroot = os.path.abspath(os.path.dirname(ymlfilepath))
 
-        for field, item in iteritems(yamldefs):
-            if field == '_SOURCES_':
+        for imagename, defn in iteritems(yamldefs):
+            if imagename == '_SOURCES_':
                 yamldefs['_SOURCES_'] = [os.path.relpath(_get_abspath(pathroot, p))
                                          for p in yamldefs['_SOURCES_']]
                 continue
-            elif field in SPECIAL_FIELDS:
+            elif imagename in SPECIAL_FIELDS:
                 continue
 
-            for key in ('build_directory', 'FROM_DOCKERFILE'):
-                if key in item:
-                    item[key] = _get_abspath(pathroot, item[key])
+            for key in ('build_directory', 'FROM_DOCKERFILE', 'ignorefile'):
+                if key in defn:
+                    defn[key] = _get_abspath(pathroot, defn[key])
 
             # save the file path for logging
-            item['_sourcefile'] = relpath
+            defn['_sourcefile'] = relpath
 
-            for key in item:
+            if 'ignore' in defn and 'ignorefile' in defn:
+                raise errors.MultipleIgnoreError('Image "%s" has both "ignore" AND "ignorefile"'
+                                                 ' fields. At most ONE of these should be defined')
+
+            for key in defn:
                 if key not in RECOGNIZED_KEYS:
-                    raise errors.UnrecognizedKeyError('Field "%s" in image "%s" not recognized' %
-                                                      (key, field))
+                    raise errors.UnrecognizedKeyError(
+                            'Field "%s" in image "%s" in file "%s" not recognized' %
+                            (key, imagename, relpath))
 
     def generate_build(self, image, targetname, rebuilds=None):
         """

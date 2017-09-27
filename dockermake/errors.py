@@ -64,3 +64,7 @@ class InvalidRequiresList(UserException):
 
 class ParsingFailure(UserException):
     CODE = 50
+
+
+class MultipleIgnoreError(UserException):
+    CODE = 51
