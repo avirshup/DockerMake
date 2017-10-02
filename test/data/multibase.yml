@@ -9,13 +9,15 @@ install_something:
   build: |
     RUN mkdir -p /opt/java8
     RUN touch /opt/java8/java
+    RUN echo success2 > /opt/success
 
-target3:
+target3_bases:
   requires:
     - install_something
   FROM: continuumio/miniconda3
+  build: RUN echo success3 > /opt/success
 
-target2:
+target2_bases:
   requires:
     - install_something
     - base2
