@@ -48,7 +48,11 @@ def assert_file_content(imgname, path, content):
         assert False, "Image %s not found: %s" % (imgname, exc)
 
     container = client.containers.create(image)
-    tarstream, stat = container.get_archive(path)
+
+    try:
+        tarstream, stat = container.get_archive(path)
+    except docker.errors.NotFound:
+        assert False, 'File %s not found' % path
     container.remove()
 
     tf = tarfile.open(fileobj=io.BytesIO(tarstream.read()))

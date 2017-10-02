@@ -24,6 +24,25 @@ img3 = creates_images('target_ignore_string')
 def test_ignore_string(img3):
     run_docker_make('-f data/ignores.yml target_ignore_string')
     assert_file_content('target_ignore_string', '/opt/a', 'a')
+    with pytest.raises(AssertionError):
+        assert_file_content('target_ignore_string', '/opt/b', 'b')
     assert_file_content('target_ignore_string', '/opt/c', 'c')
 
 
+img4 = creates_images('target_ignorefile')
+def test_ignorefile(img4):
+    run_docker_make('-f data/ignores.yml target_ignorefile')
+    assert_file_content('target_ignorefile', '/opt/a', 'a')
+    assert_file_content('target_ignorefile', '/opt/b', 'b')
+    with pytest.raises(AssertionError):
+        assert_file_content('target_ignorefile', '/opt/c', 'c')
+
+
+img5 = creates_images('target_regular_ignore')
+def test_regular_ignore(img5):
+    run_docker_make('-f data/ignores.yml target_regular_ignore')
+    with pytest.raises(AssertionError):
+        assert_file_content('target_regular_ignore', '/opt/a', 'a')
+    with pytest.raises(AssertionError):
+        assert_file_content('target_regular_ignore', '/opt/b', 'b')
+    assert_file_content('target_regular_ignore', '/opt/c', 'c')

@@ -6,3 +6,16 @@ target_ignore_string:
   build: |
     ADD . /opt
 
+target_ignorefile:
+  FROM: alpine
+  build_directory: ./test_build
+  ignorefile: test_build/custom_ignore_file.txt
+  build: |
+    ADD . /opt
+
+
+target_regular_ignore:
+  FROM: alpine
+  build_directory: ./test_build
+  build: |
+    ADD . /opt
