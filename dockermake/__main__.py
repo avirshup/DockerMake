@@ -63,10 +63,10 @@ def run(args):
         return
 
     if not os.path.exists(args.makefile):
-        print('No docker makefile found at path "%s"'%args.makefile)
+        msg = 'No docker makefile found at path "%s"' % args.makefile
         if args.makefile == 'DockerMake.yml':
-            print('Type `docker-make --help` to see usage.')
-        sys.exit(1)
+            msg += '\nType `docker-make --help` to see usage.'
+        raise errors.MissingFileError(msg)
 
     defs = ImageDefs(args.makefile)
 
