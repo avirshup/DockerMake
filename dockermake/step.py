@@ -59,7 +59,7 @@ class BuildStep(object):
         elif img_def.get('ignorefile', None) is not None:
             assert 'ignore' not in img_def
             with open(img_def['ignorefile'], 'r') as igfile:
-                lines = list(igfile)
+                lines = igfile.read().splitlines()
         else:
             return None
 

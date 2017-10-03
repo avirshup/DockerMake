@@ -20,29 +20,42 @@ def test_paths_relative_interpreted_relative_to_definition_file(img2):
                         'this is a file used in tests for relative path resolution')
 
 
+_FILES = {'a': {'content': 'a', 'path': '/opt/a'},
+          'b': {'content': 'b', 'path': '/opt/b'},
+          'c': {'content': 'c', 'path': '/opt/c'},
+          'd': {'content': 'd', 'path': '/opt/d/d'}}
+
+
 img3 = creates_images('target_ignore_string')
 def test_ignore_string(img3):
     run_docker_make('-f data/ignores.yml target_ignore_string')
-    assert_file_content('target_ignore_string', '/opt/a', 'a')
-    with pytest.raises(AssertionError):
-        assert_file_content('target_ignore_string', '/opt/b', 'b')
-    assert_file_content('target_ignore_string', '/opt/c', 'c')
+    _check_files('target_ignore_string', b=False)
 
 
 img4 = creates_images('target_ignorefile')
 def test_ignorefile(img4):
     run_docker_make('-f data/ignores.yml target_ignorefile')
-    assert_file_content('target_ignorefile', '/opt/a', 'a')
-    assert_file_content('target_ignorefile', '/opt/b', 'b')
-    with pytest.raises(AssertionError):
-        assert_file_content('target_ignorefile', '/opt/c', 'c')
+    _check_files('target_ignorefile', c=False)
 
 
 img5 = creates_images('target_regular_ignore')
 def test_regular_ignore(img5):
     run_docker_make('-f data/ignores.yml target_regular_ignore')
-    with pytest.raises(AssertionError):
-        assert_file_content('target_regular_ignore', '/opt/a', 'a')
-    with pytest.raises(AssertionError):
-        assert_file_content('target_regular_ignore', '/opt/b', 'b')
-    assert_file_content('target_regular_ignore', '/opt/c', 'c')
+    _check_files('target_regular_ignore', a=False, b=False)
+
+
+img6 = creates_images('target_ignore_directory')
+def test_ignore_directory(img6):
+    run_docker_make('-f data/ignores.yml target_ignore_directory')
+    _check_files('target_ignore_directory', d=False)
+
+
+def _check_files(img, **present):
+    for f, record in _FILES.items():
+        if not present.get(f, True):
+            with pytest.raises(AssertionError):
+                assert_file_content(img, record['path'], record['content'])
+        else:
+            assert_file_content(img, record['path'], record['content'])
+
+

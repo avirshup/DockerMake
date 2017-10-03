@@ -2,7 +2,9 @@ target_ignore_string:
   FROM: alpine
   build_directory: ./test_build
   ignore: |
+    # comment
     b
+    unmatched_line
   build: |
     ADD . /opt
 
@@ -16,6 +18,15 @@ target_ignorefile:
 
 target_regular_ignore:
   FROM: alpine
+  build_directory: ./test_build
+  build: |
+    ADD . /opt
+
+target_ignore_directory:
+  FROM: alpine
+  ignore: |
+    d
+    unmatched_line
   build_directory: ./test_build
   build: |
     ADD . /opt
