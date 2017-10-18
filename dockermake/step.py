@@ -209,6 +209,24 @@ class FileCopyStep(BuildStep):
         stage = staging.StagedFile(self.sourceimage, self.sourcepath, self.destpath)
         stage.stage(self.base_image, self.buildname)
 
+    @property
+    def dockerfile_lines(self):
+        w1 = colored(
+                'WARNING: this build includes files that are built in other images!!! The generated'
+                '\n         Dockerfile must be built in a directory that contains'
+                ' the file/directory:',
+                'red', attrs=['bold'])
+        w2 = colored('         ' + self.sourcepath, 'red')
+        w3 = (colored('         from image ', 'red')
+              + colored(self.sourcepath, 'blue', attrs=['bold']))
+        print('\n'.join((w1, w2, w3)))
+        return ["",
+                "# Warning: the file \"%s\" from the image \"%s\""
+                " must be present in this build context!!" %
+                (self.sourcepath, self.sourceimage),
+                "ADD %s %s" % (os.path.basename(self.sourcepath), self.destpath),
+                '']
+
 
 class BuildError(Exception):
     def __init__(self, dockerfile, item, build_args):
