@@ -43,6 +43,8 @@ class BuildTarget(object):
         self.from_image = from_image
 
     def write_dockerfile(self, output_dir):
+        """ Used only to write a Dockerfile that will NOT be built by docker-make
+        """
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
