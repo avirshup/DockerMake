@@ -14,7 +14,6 @@
 from __future__ import print_function
 
 import os
-import pprint
 from io import StringIO, BytesIO
 import sys
 
@@ -136,7 +135,7 @@ class BuildStep(object):
         try:
             utils.stream_docker_logs(stream, self.buildname)
         except ValueError as e:
-            raise BuildError(dockerfile, e.args[0], build_args)
+            raise errors.BuildError(dockerfile, e.args[0], build_args)
 
         # remove the temporary dockerfile
         if tempdir is not None:
@@ -227,16 +226,3 @@ class FileCopyStep(BuildStep):
                 "ADD %s %s" % (os.path.basename(self.sourcepath), self.destpath),
                 '']
 
-
-class BuildError(Exception):
-    def __init__(self, dockerfile, item, build_args):
-        with open('dockerfile.fail', 'w') as dff:
-            print(dockerfile, file=dff)
-        with BytesIO() as stream:
-            print('\n   -------- Docker daemon output --------', file=stream)
-            pprint.pprint(item, stream, indent=4)
-            print('   -------- Arguments to client.build --------', file=stream)
-            pprint.pprint(build_args, stream, indent=4)
-            print('This dockerfile was written to dockerfile.fail', file=stream)
-            stream.seek(0)
-            super(BuildError, self).__init__(stream.read())
