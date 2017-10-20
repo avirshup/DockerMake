@@ -93,6 +93,20 @@ class ImageDefs(object):
                 if key in defn:
                     defn[key] = _get_abspath(pathroot, defn[key])
 
+            if 'copy_from' in defn:
+                if not isinstance(defn['copy_from'], dict):
+                    raise errors.ParsingFailure((
+                            'Syntax error in file "%s": \n' +
+                            'The "copy_from" field in image definition "%s" is not \n' 
+                            'a key:value list.') % (ymlfilepath, imagename))
+                for otherimg, value in defn.get('copy_from', {}).items():
+                    if not isinstance(value, dict):
+                        raise errors.ParsingFailure((
+                            'Syntax error in field:\n'
+                            '     %s . copy_from . %s\nin file "%s". \n'
+                            'All entries must be of the form "sourcepath: destpath"')%
+                                 (imagename, otherimg, ymlfilepath))
+
             # save the file path for logging
             defn['_sourcefile'] = relpath
 
