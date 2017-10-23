@@ -120,7 +120,7 @@ class BuildTarget(object):
 
     def _get_stack_key(self, istep):
         names = [self.from_image]
-        for i in xrange(istep+1):
+        for i in range(istep+1):
             step = self.steps[i]
             if isinstance(step, FileCopyStep):
                 continue
