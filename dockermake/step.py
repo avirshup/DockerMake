@@ -18,7 +18,7 @@ from io import StringIO, BytesIO
 import sys
 
 from termcolor import cprint, colored
-import docker.utils
+import docker.utils, docker.errors
 
 from . import utils
 from . import staging
@@ -134,8 +134,8 @@ class BuildStep(object):
         stream = client.build(**build_args)
         try:
             utils.stream_docker_logs(stream, self.buildname)
-        except ValueError as e:
-            raise errors.BuildError(dockerfile, e.args[0], build_args)
+        except (ValueError, docker.errors.APIError) as e:
+            raise errors.BuildError(dockerfile, str(e), build_args)
 
         # remove the temporary dockerfile
         if tempdir is not None:

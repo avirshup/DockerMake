@@ -62,8 +62,6 @@ class StagedFile(object):
             startimage (str): name of the image to stage these files into
             newimage (str): name of the created image
         """
-        from .step import BuildError
-
         client = utils.get_client()
         cprint('  Copying file from "%s:/%s" \n                 to "%s://%s/"'
                % (self.sourceimage, self.sourcepath, startimage, self.destpath),
@@ -111,7 +109,7 @@ class StagedFile(object):
         try:
             utils.stream_docker_logs(stream, newimage)
         except ValueError as e:
-            raise BuildError(dockerfile, e.args[0], build_args=buildargs)
+            raise errors.BuildError(dockerfile, e.args[0], build_args=buildargs)
 
     def _setcache(self, client):
         if self._sourceobj is None:  # get image and set up cache if necessary

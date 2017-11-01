@@ -43,13 +43,12 @@ class ImageDefs(object):
         print('Copy cache directory: %s' % staging.TMPDIR)
         try:
             self.ymldefs = self.parse_yaml(self.makefile_path)
+        except errors.UserException:
+            raise
         except Exception as exc:
-            if isinstance(exc, errors.UserException):
-                raise
-            else:
-                raise errors.ParsingFailure('Failed to read file %s:\n' % self.makefile_path +
-                                            str(exc))
-        self.all_targets = self.ymldefs.pop('_ALL_', None)
+            raise errors.ParsingFailure('Failed to read file %s:\n' % self.makefile_path +
+                                        str(exc))
+        self.all_targets = self.ymldefs.pop('_ALL_', [])
         self._external_dockerfiles = {}
 
     def parse_yaml(self, filename):
