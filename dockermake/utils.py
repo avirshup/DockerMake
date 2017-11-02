@@ -15,7 +15,6 @@ from __future__ import print_function
 
 import collections
 import os
-import sys
 import textwrap
 
 import yaml
@@ -50,8 +49,8 @@ def list_image_defs(args, defs):
     return
 
 
-def generate_name(image, args):
-    repo_base = args.repository
+def generate_name(image, repo, tag):
+    repo_base = repo
 
     if repo_base is not None:
         if repo_base[-1] not in ':/':
@@ -60,11 +59,11 @@ def generate_name(image, args):
     else:
         repo_name = image
 
-    if args.tag:
+    if tag:
         if ':' in repo_name:
-            repo_name += '-'+args.tag
+            repo_name += '-'+tag
         else:
-            repo_name += ':'+args.tag
+            repo_name += ':'+tag
 
     return repo_name
 
@@ -109,7 +108,11 @@ def build_targets(args, defs, targets):
         print("\nREGISTRY LOGIN SUCCESS:",registry)
 
     built, warnings = [], []
-    builders = [defs.generate_build(t, generate_name(t, args), rebuilds=args.bust_cache)
+    builders = [defs.generate_build(t,
+                                    generate_name(t, args.repository, args.tag),
+                                    rebuilds=args.bust_cache,
+                                    cache_repo=args.cache_repo,
+                                    cache_tag=args.cache_tag)
                 for t in targets]
     for b in builders:
         b.build(client,

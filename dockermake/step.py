@@ -35,10 +35,11 @@ class BuildStep(object):
         img_def (dict): yaml definition of this image
         buildname (str): what to call this image, once built
         bust_cache(bool): never use docker cache for this build step
+        from_cache (str or list): use this(these) image(s) to resolve build cache
     """
 
     def __init__(self, imagename, baseimage, img_def, buildname,
-                 build_first=None, bust_cache=False):
+                 build_first=None, bust_cache=False, from_cache=None):
         self.imagename = imagename
         self.baseimage = baseimage
         self.dockerfile_lines = ['FROM %s\n' % baseimage, img_def.get('build', '')]
@@ -49,6 +50,10 @@ class BuildStep(object):
         self.build_first = build_first
         self.custom_exclude = self._get_ignorefile(img_def)
         self.ignoredefs_file = img_def.get('ignorefile', img_def['_sourcefile'])
+        if from_cache and isinstance(str, from_cache):
+            self.from_cache = [from_cache]
+        else:
+            self.from_cache = from_cache
 
     @staticmethod
     def _get_ignorefile(img_def):
@@ -97,6 +102,9 @@ class BuildStep(object):
                           pull=pull,
                           nocache=not usecache,
                           decode=True, rm=True)
+
+        if usecache and self.from_cache:
+            build_args['from_cache'] = self.from_cache
 
         if self.build_dir is not None:
             tempdir = self.write_dockerfile(dockerfile)
@@ -180,24 +188,19 @@ class FileCopyStep(BuildStep):
     Args:
         sourceimage (str): name of image to copy file from
         sourcepath (str): file path in source image
-        base_image (str): name of image to copy file into
         destpath (str): directory to copy the file into
-        buildname (str): name of the built image
-        ymldef (Dict): yml definition of this build step
-        definitionname (str): name of this definition
+        imagename (str): name of this image definition
+        baseimage (str): base image for this step
+        img_def (dict): yaml definition of this image
+        buildname (str): what to call this image, once built
+        from_cache (str or list): use this(these) image(s) to resolve build cache
     """
-
-    bust_cache = False  # can't bust this
-
-    def __init__(self, sourceimage, sourcepath, base_image, destpath, buildname,
-                 ymldef, definitionname):
+    def __init__(self, sourceimage, sourcepath, destpath, *args, **kwargs):
+        kwargs.pop('bust_cache', None)
+        super().__init__(*args, **kwargs)
         self.sourceimage = sourceimage
         self.sourcepath = sourcepath
-        self.base_image = base_image
         self.destpath = destpath
-        self.buildname = buildname
-        self.definitionname = definitionname
-        self.sourcefile = ymldef['_sourcefile']
 
     def build(self, client, pull=False, usecache=True):
         """
@@ -205,8 +208,9 @@ class FileCopyStep(BuildStep):
             `pull` and `usecache` are for compatibility only. They're irrelevant because
             hey were applied when BUILDING self.sourceimage
         """
-        stage = staging.StagedFile(self.sourceimage, self.sourcepath, self.destpath)
-        stage.stage(self.base_image, self.buildname)
+        stage = staging.StagedFile(self.sourceimage, self.sourcepath, self.destpath,
+                                   from_cache=self.from_cache)
+        stage.stage(self.baseimage, self.buildname)
 
     @property
     def dockerfile_lines(self):

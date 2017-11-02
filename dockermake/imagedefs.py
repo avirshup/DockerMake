@@ -26,6 +26,7 @@ import dockermake.step
 from . import builds
 from . import staging
 from . import errors
+from . import utils
 
 RECOGNIZED_KEYS = set(('requires build_directory build copy_from FROM description _sourcefile'
                        ' FROM_DOCKERFILE ignore ignorefile')
@@ -120,7 +121,7 @@ class ImageDefs(object):
                             'Field "%s" in image "%s" in file "%s" not recognized' %
                             (key, imagename, relpath))
 
-    def generate_build(self, image, targetname, rebuilds=None):
+    def generate_build(self, image, targetname, rebuilds=None, cache_repo='', cache_tag=''):
         """
         Separate the build into a series of one or more intermediate steps.
         Each specified build directory gets its own step
@@ -129,8 +130,14 @@ class ImageDefs(object):
             image (str): name of the image as defined in the dockermake.py file
             targetname (str): name to tag the final built image with
             rebuilds (List[str]): list of image layers to rebuild (i.e., without docker's cache)
+            cache_repo (str): repository to get images for caches in builds
+            cache_tag (str): tags to use from repository for caches in builds
         """
         from_image = self.get_external_base_image(image)
+        if cache_repo or cache_tag:
+            from_cache = utils.generate_name(image, cache_repo, cache_tag)
+        else:
+            from_cache = None
         if from_image is None:
             raise errors.NoBaseError("No base image found in %s's dependencies" % image)
         if isinstance(from_image, ExternalDockerfile):
@@ -150,12 +157,12 @@ class ImageDefs(object):
         for base_name in self.sort_dependencies(image):
             istep += 1
             buildname = 'dmkbuild_%s_%d' % (image, istep)
-            build_steps.append(dockermake.step.BuildStep(base_name,
-                                                         base_image,
-                                                         self.ymldefs[base_name],
-                                                         buildname,
-                                                         bust_cache=base_name in rebuilds,
-                                                         build_first=build_first))
+            build_steps.append(
+                    dockermake.step.BuildStep(
+                            base_name, base_image, self.ymldefs[base_name],
+                            buildname, bust_cache=base_name in rebuilds,
+                            build_first=build_first, from_cache=from_cache))
+
             base_image = buildname
             build_first = None
 
@@ -164,14 +171,16 @@ class ImageDefs(object):
                 for sourcepath, destpath in iteritems(files):
                     istep += 1
                     buildname = 'dmkbuild_%s_%d' % (image, istep)
-                    build_steps.append(dockermake.step.FileCopyStep(sourceimage, sourcepath,
-                                                                    base_image, destpath,
-                                                                    buildname,
-                                                                    self.ymldefs[base_name],
-                                                                    base_name))
+                    build_steps.append(
+                            dockermake.step.FileCopyStep(
+                                    sourceimage, sourcepath, destpath,
+                                    base_name, base_image, self.ymldefs[base_name],
+                                    buildname, bust_cache=base_name in rebuilds,
+                                    build_first=build_first, from_cache=from_cache))
                     base_image = buildname
 
-        sourcebuilds = [self.generate_build(img, img) for img in sourceimages]
+        sourcebuilds = [self.generate_build(img, img, cache_repo=cache_repo, cache_tag=cache_tag)
+                        for img in sourceimages]
 
         return builds.BuildTarget(imagename=image,
                                   targetname=targetname,
