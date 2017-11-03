@@ -42,7 +42,7 @@ class BuildStep(object):
                  build_first=None, bust_cache=False, from_cache=None):
         self.imagename = imagename
         self.baseimage = baseimage
-        self.dockerfile_lines = ['FROM %s\n' % baseimage, img_def.get('build', '')]
+        self.img_def = img_def
         self.buildname = buildname
         self.build_dir = img_def.get('build_directory', None)
         self.bust_cache = bust_cache
@@ -180,6 +180,11 @@ class BuildStep(object):
         image.built = True
         cprint("  Finished building Dockerfile at %s" % image.path, 'green')
 
+    @property
+    def dockerfile_lines(self):
+        return ['FROM %s\n' % self.baseimage,
+                self.img_def.get('build', '')]
+
 
 class FileCopyStep(BuildStep):
     """
@@ -214,6 +219,9 @@ class FileCopyStep(BuildStep):
 
     @property
     def dockerfile_lines(self):
+        """
+        Used only when printing dockerfiles, not for building
+        """
         w1 = colored(
                 'WARNING: this build includes files that are built in other images!!! The generated'
                 '\n         Dockerfile must be built in a directory that contains'
