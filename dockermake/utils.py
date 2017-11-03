@@ -18,7 +18,8 @@ import os
 import textwrap
 
 import yaml
-import docker
+import docker.errors
+from termcolor import cprint
 
 from . import errors
 
@@ -95,7 +96,7 @@ def build_targets(args, defs, targets):
     if args.no_build:
         client = None
     else:
-        client = get_client_api()
+        client = get_client()
 
     if args.push_to_registry and args.registry_user:
         if not args.repository:
@@ -147,7 +148,7 @@ def push(client, name):
         print(warn)
     else:
         print('  Pushing %s to %s:' % (name, name.split('/')[0]))
-        stream = _linestream(client.push(name, stream=True))
+        stream = _linestream(client.api.push(name, stream=True))
         line = stream_docker_logs(stream, 'PUSH %s' % name)
 
         if 'error' in line:

@@ -68,7 +68,7 @@ class BuildTarget(object):
         Drives the build of the final image - get the list of steps and execute them.
 
         Args:
-            client (docker.APIClient): docker client object that will build the image
+            client (docker.Client): docker client object that will build the image
             nobuild (bool): just create dockerfiles, don't actually build the image
             keepbuildtags (bool): keep tags on intermediate images
             usecache (bool): use docker cache, or rebuild everything from scratch?
@@ -142,13 +142,13 @@ class BuildTarget(object):
     def finalizenames(self, client, finalimage, keepbuildtags):
         """ Tag the built image with its final name and untag intermediate containers
         """
-        client.tag(finalimage, *self.targetname.split(':'))
+        client.api.tag(finalimage, *self.targetname.split(':'))
         cprint('Tagged final image as "%s"' % self.targetname,
                'green')
         if not keepbuildtags:
             print('Untagging intermediate containers:', end='')
             for step in self.steps:
-                client.remove_image(step.buildname, force=True)
+                client.api.remove_image(step.buildname, force=True)
                 print(step.buildname, end=',')
             print()
 

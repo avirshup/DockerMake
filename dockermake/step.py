@@ -78,7 +78,7 @@ class BuildStep(object):
         step.
 
         Args:
-            client (docker.APIClient): docker client object that will build the image
+            client (docker.Client): docker client object that will build the image
             pull (bool): whether to pull dependent layers from remote repositories
             usecache (bool): whether to use cached layers or rebuild from scratch
         """
@@ -139,7 +139,7 @@ class BuildStep(object):
             tempdir = None
 
         # start the build
-        stream = client.build(**build_args)
+        stream = client.api.build(**build_args)
         try:
             utils.stream_docker_logs(stream, self.buildname)
         except (ValueError, docker.errors.APIError) as e:
@@ -165,11 +165,11 @@ class BuildStep(object):
         cprint("  Building base image from %s" % image, 'blue')
         assert not image.built
 
-        stream = client.build(path=os.path.dirname(image.path),
-                              dockerfile=os.path.basename(image.path),
-                              tag=image.tag,
-                              decode=True,
-                              rm=True)
+        stream = client.api.build(path=os.path.dirname(image.path),
+                                  dockerfile=os.path.basename(image.path),
+                                  tag=image.tag,
+                                  decode=True,
+                                  rm=True)
 
         try:
             utils.stream_docker_logs(stream, image)
