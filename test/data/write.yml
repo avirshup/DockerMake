@@ -1,0 +1,9 @@
+writetarget:
+  FROM: miniconda
+  description: "For testing write capabilities, not meant to be built"
+  copy_from:
+    temp:
+      /b: /c
+
+temp:
+  FROM: blah

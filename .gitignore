@@ -2,6 +2,7 @@ docker_makefiles
 Dockerfile.fail
 _docker_make_tmp
 dockerfile.fail
+MANIFEST
 
 # IntelliJ project files
 .idea

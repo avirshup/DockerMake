@@ -47,6 +47,18 @@ def make_arg_parser():
     ca = parser.add_argument_group('Image caching')
     ca.add_argument('--pull', action='store_true',
                     help='Always try to pull updated FROM images')
+    ca.add_argument('--cache-repo',
+                    help='Repository to use for cached images. This allows you to invoke the '
+                    '`docker build --build-from` option for each image.'
+                    'For instance, running '
+                    '`docker-make foo bar --cache-repo docker.io/cache` will use '
+                    'docker.io/cache/foo as a cache for `foo` and docker.io/cache/bar as a cache'
+                    'for `bar`.',
+                    default='')
+    ca.add_argument('--cache-tag',
+                    help='Tag to use for cached images; '
+                         'can be used with the --cache-repo option (see above).',
+                    default='')
     ca.add_argument('--no-cache', action='store_true',
                     help="Rebuild every layer")
     ca.add_argument('--bust-cache', action='append',
@@ -60,8 +72,10 @@ def make_arg_parser():
                     help="Prepend this repository to all built images, e.g.\n"
                          "`docker-make hello-world -u quay.io/elvis` will tag the image "
                          "as `quay.io/elvis/hello-world`. You can add a ':' to the end to "
-                         "image names into tags:\n `docker-make -u quay.io/elvis/repo: hello-world` "
-                         "will create the image in the elvis repository: quay.io/elvis/repo:hello-world")
+                         "image names into tags:\n "
+                         "`docker-make -u quay.io/elvis/repo: hello-world` "
+                         "will create the "
+                         "image in the elvis repository: quay.io/elvis/repo:hello-world")
     rt.add_argument('--tag', '-t', type=str,
                     help='Tag all built images with this tag. If image names are ALREADY tags (i.e.,'
                          ' your repo name ends in a ":"), this will append the tag name with a dash. '
@@ -82,6 +96,7 @@ def make_arg_parser():
                     help="Print version and exit.")
     hh.add_argument('--help-yaml', action='store_true',
                     help="Print summary of YAML file format and exit.")
+    hh.add_argument('--debug', action='store_true')
 
     return parser
 

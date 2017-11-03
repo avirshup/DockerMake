@@ -43,6 +43,8 @@ class BuildTarget(object):
         self.from_image = from_image
 
     def write_dockerfile(self, output_dir):
+        """ Used only to write a Dockerfile that will NOT be built by docker-make
+        """
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
@@ -118,7 +120,7 @@ class BuildTarget(object):
 
     def _get_stack_key(self, istep):
         names = [self.from_image]
-        for i in xrange(istep+1):
+        for i in range(istep+1):
             step = self.steps[i]
             if isinstance(step, FileCopyStep):
                 continue

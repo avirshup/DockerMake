@@ -1,0 +1,4 @@
+simple-target:
+  FROM: python:3.6-slim
+  build: |
+    RUN echo "spam egg foo bar" > /opt/sometext.txt

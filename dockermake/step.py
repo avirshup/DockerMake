@@ -14,12 +14,11 @@
 from __future__ import print_function
 
 import os
-import pprint
 from io import StringIO, BytesIO
 import sys
 
 from termcolor import cprint, colored
-import docker.utils
+import docker.utils, docker.errors
 
 from . import utils
 from . import staging
@@ -36,13 +35,14 @@ class BuildStep(object):
         img_def (dict): yaml definition of this image
         buildname (str): what to call this image, once built
         bust_cache(bool): never use docker cache for this build step
+        cache_from (str or list): use this(these) image(s) to resolve build cache
     """
 
     def __init__(self, imagename, baseimage, img_def, buildname,
-                 build_first=None, bust_cache=False):
+                 build_first=None, bust_cache=False, cache_from=None):
         self.imagename = imagename
         self.baseimage = baseimage
-        self.dockerfile_lines = ['FROM %s\n' % baseimage, img_def.get('build', '')]
+        self.img_def = img_def
         self.buildname = buildname
         self.build_dir = img_def.get('build_directory', None)
         self.bust_cache = bust_cache
@@ -50,6 +50,10 @@ class BuildStep(object):
         self.build_first = build_first
         self.custom_exclude = self._get_ignorefile(img_def)
         self.ignoredefs_file = img_def.get('ignorefile', img_def['_sourcefile'])
+        if cache_from and isinstance(cache_from, str):
+            self.cache_from = [cache_from]
+        else:
+            self.cache_from = cache_from
 
     @staticmethod
     def _get_ignorefile(img_def):
@@ -99,6 +103,9 @@ class BuildStep(object):
                           nocache=not usecache,
                           decode=True, rm=True)
 
+        if usecache and self.cache_from:
+            build_args['cache_from'] = self.cache_from
+
         if self.build_dir is not None:
             tempdir = self.write_dockerfile(dockerfile)
             context_path = os.path.abspath(os.path.expanduser(self.build_dir))
@@ -135,8 +142,8 @@ class BuildStep(object):
         stream = client.build(**build_args)
         try:
             utils.stream_docker_logs(stream, self.buildname)
-        except ValueError as e:
-            raise BuildError(dockerfile, e.args[0], build_args)
+        except (ValueError, docker.errors.APIError) as e:
+            raise errors.BuildError(dockerfile, str(e), build_args)
 
         # remove the temporary dockerfile
         if tempdir is not None:
@@ -173,6 +180,11 @@ class BuildStep(object):
         image.built = True
         cprint("  Finished building Dockerfile at %s" % image.path, 'green')
 
+    @property
+    def dockerfile_lines(self):
+        return ['FROM %s\n' % self.baseimage,
+                self.img_def.get('build', '')]
+
 
 class FileCopyStep(BuildStep):
     """
@@ -181,24 +193,19 @@ class FileCopyStep(BuildStep):
     Args:
         sourceimage (str): name of image to copy file from
         sourcepath (str): file path in source image
-        base_image (str): name of image to copy file into
         destpath (str): directory to copy the file into
-        buildname (str): name of the built image
-        ymldef (Dict): yml definition of this build step
-        definitionname (str): name of this definition
+        imagename (str): name of this image definition
+        baseimage (str): base image for this step
+        img_def (dict): yaml definition of this image
+        buildname (str): what to call this image, once built
+        cache_from (str or list): use this(these) image(s) to resolve build cache
     """
-
-    bust_cache = False  # can't bust this
-
-    def __init__(self, sourceimage, sourcepath, base_image, destpath, buildname,
-                 ymldef, definitionname):
+    def __init__(self, sourceimage, sourcepath, destpath, *args, **kwargs):
+        kwargs.pop('bust_cache', None)
+        super(FileCopyStep, self).__init__(*args, **kwargs)
         self.sourceimage = sourceimage
         self.sourcepath = sourcepath
-        self.base_image = base_image
         self.destpath = destpath
-        self.buildname = buildname
-        self.definitionname = definitionname
-        self.sourcefile = ymldef['_sourcefile']
 
     def build(self, client, pull=False, usecache=True):
         """
@@ -206,19 +213,28 @@ class FileCopyStep(BuildStep):
             `pull` and `usecache` are for compatibility only. They're irrelevant because
             hey were applied when BUILDING self.sourceimage
         """
-        stage = staging.StagedFile(self.sourceimage, self.sourcepath, self.destpath)
-        stage.stage(self.base_image, self.buildname)
+        stage = staging.StagedFile(self.sourceimage, self.sourcepath, self.destpath,
+                                   cache_from=self.cache_from)
+        stage.stage(self.baseimage, self.buildname)
 
+    @property
+    def dockerfile_lines(self):
+        """
+        Used only when printing dockerfiles, not for building
+        """
+        w1 = colored(
+                'WARNING: this build includes files that are built in other images!!! The generated'
+                '\n         Dockerfile must be built in a directory that contains'
+                ' the file/directory:',
+                'red', attrs=['bold'])
+        w2 = colored('         ' + self.sourcepath, 'red')
+        w3 = (colored('         from image ', 'red')
+              + colored(self.sourcepath, 'blue', attrs=['bold']))
+        print('\n'.join((w1, w2, w3)))
+        return ["",
+                "# Warning: the file \"%s\" from the image \"%s\""
+                " must be present in this build context!!" %
+                (self.sourcepath, self.sourceimage),
+                "ADD %s %s" % (os.path.basename(self.sourcepath), self.destpath),
+                '']
 
-class BuildError(Exception):
-    def __init__(self, dockerfile, item, build_args):
-        with open('dockerfile.fail', 'w') as dff:
-            print(dockerfile, file=dff)
-        with BytesIO() as stream:
-            print('\n   -------- Docker daemon output --------', file=stream)
-            pprint.pprint(item, stream, indent=4)
-            print('   -------- Arguments to client.build --------', file=stream)
-            pprint.pprint(build_args, stream, indent=4)
-            print('This dockerfile was written to dockerfile.fail', file=stream)
-            stream.seek(0)
-            super(BuildError, self).__init__(stream.read())

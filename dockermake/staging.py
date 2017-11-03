@@ -47,13 +47,15 @@ class StagedFile(object):
         sourceimage (str): name of the image to copy from
         sourcepath (str): path in the source image
         destpath (str): path in the target image
+        cache_from (str or list): use this(these) image(s) to resolve build cache
     """
-    def __init__(self, sourceimage, sourcepath, destpath):
+    def __init__(self, sourceimage, sourcepath, destpath, cache_from=None):
         self.sourceimage = sourceimage
         self.sourcepath = sourcepath
         self.destpath = destpath
         self._sourceobj = None
         self._cachedir = None
+        self.cache_from = cache_from
 
     def stage(self, startimage, newimage):
         """ Copies the file from source to target
@@ -62,8 +64,6 @@ class StagedFile(object):
             startimage (str): name of the image to stage these files into
             newimage (str): name of the created image
         """
-        from .step import BuildError
-
         client = utils.get_client()
         cprint('  Copying file from "%s:/%s" \n                 to "%s://%s/"'
                % (self.sourceimage, self.sourcepath, startimage, self.destpath),
@@ -106,12 +106,15 @@ class StagedFile(object):
                          tag=newimage,
                          decode=True)
 
+        if self.cache_from:
+            buildargs['cache_from'] = self.cache_from
+
         # Build and show logs
         stream = client.api.build(**buildargs)
         try:
             utils.stream_docker_logs(stream, newimage)
         except ValueError as e:
-            raise BuildError(dockerfile, e.args[0], build_args=buildargs)
+            raise errors.BuildError(dockerfile, e.args[0], build_args=buildargs)
 
     def _setcache(self, client):
         if self._sourceobj is None:  # get image and set up cache if necessary
