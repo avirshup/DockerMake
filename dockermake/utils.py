@@ -52,7 +52,7 @@ def list_image_defs(args, defs):
 def generate_name(image, repo, tag):
     repo_base = repo
 
-    if repo_base is not None:
+    if repo_base:
         if repo_base[-1] not in ':/':
             repo_base += '/'
         repo_name = repo_base + image
