@@ -57,6 +57,7 @@ def test_ignore_directory(img6):
 
 
 def test_dockerfile_write(tmpdir):
+    tmpdir = str(tmpdir)
     run_docker_make('-f data/write.yml -p -n --dockerfile-dir %s writetarget' % tmpdir)
     assert os.path.isfile(os.path.join(tmpdir, 'Dockerfile.writetarget'))
 
