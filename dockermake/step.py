@@ -202,7 +202,7 @@ class FileCopyStep(BuildStep):
     """
     def __init__(self, sourceimage, sourcepath, destpath, *args, **kwargs):
         kwargs.pop('bust_cache', None)
-        super().__init__(*args, **kwargs)
+        super(FileCopyStep, self).__init__(*args, **kwargs)
         self.sourceimage = sourceimage
         self.sourcepath = sourcepath
         self.destpath = destpath
