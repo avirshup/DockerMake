@@ -103,19 +103,21 @@ Image definitions can include any of the following fields:
 
 ##### **`FROM`/`FROM_DOCKERFILE`**
 The docker image to use as a base for this image (and those that require it). This can be either the name of an image (using `FROM`) or the path to a local Dockerfile (using `FROM_DOCKERFILE`).
-    **Example:**
-   ```yml
-   baseimage:
-      FROM: python:3.6-slim
-   ```
-   or
-   ```yml
-   baseimage:
-      FROM_DOCKERFILE: ../myproject/Dockerfile
+
+*Example:*
+```yml
+baseimage:
+   FROM: python:3.6-slim
+```
+or
+```yml
+baseimage:
+   FROM_DOCKERFILE: ../myproject/Dockerfile
    ```
 ##### **`build`**
 Multi-line string defining dockerfile commands to build this step. Note that these commands CANNOT contain 'FROM'. See also [Notes on multi-line strings](#Notes) below.
-**Example:**
+
+*Example:*
 ```yml
 build-image:
    requires:
@@ -128,7 +130,8 @@ build-image:
 
 ##### **`requires`**
 List of other image definitions to include in this one. `docker-make` will create a new image from a single DockerFile that includes an amalgamation of all image definitions.
-  **Example:** 
+
+*Example:*
  ```yml
  my-tools:
    build: |
@@ -143,7 +146,8 @@ List of other image definitions to include in this one. `docker-make` will creat
 
 ##### **`build_directory`**
 Path to a directory on your filesystem. This will be used to locate files for `ADD` and `COPY` commands in your dockerfile. See [Notes on relative paths](#Notes) below.
-**Example:**
+
+*Example:*
 ```yml
 data-image:
     build_directory: ./datafiles
@@ -155,7 +159,7 @@ data-image:
 ##### **`ignore`/`ignorefile`**
 A custom [.dockerignore](https://docs.docker.com/engine/reference/builder/#dockerignore-file) for this step. This overrides any existing `.dockerignore` file in the build context. Only relevant for `ADD` or `COPY` commands when the `build_directory` is specified. This can either be a multi-line string (using the `ignore` field)  or the path to a file (using the `ignorefile` field).
 
-**Example:**
+*Example:*
 ```yml
 data-image:
     build_directory: ./datafiles
