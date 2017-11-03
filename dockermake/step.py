@@ -78,7 +78,7 @@ class BuildStep(object):
         step.
 
         Args:
-            client (docker.APIClient): docker client object that will build the image
+            client (docker.Client): docker client object that will build the image
             pull (bool): whether to pull dependent layers from remote repositories
             usecache (bool): whether to use cached layers or rebuild from scratch
         """
@@ -94,7 +94,8 @@ class BuildStep(object):
             usecache = False
 
         if not usecache:
-            print('   INFO: Docker caching disabled - forcing rebuild')
+            cprint('  Build cache disabled - this image will be rebuilt from scratch',
+                   'yellow')
 
         dockerfile = u'\n'.join(self.dockerfile_lines)
 
@@ -103,8 +104,8 @@ class BuildStep(object):
                           nocache=not usecache,
                           decode=True, rm=True)
 
-        if usecache and self.cache_from:
-            build_args['cache_from'] = self.cache_from
+        if usecache:
+            utils.set_build_cachefrom(self.cache_from, build_args, client)
 
         if self.build_dir is not None:
             tempdir = self.write_dockerfile(dockerfile)
@@ -139,7 +140,7 @@ class BuildStep(object):
             tempdir = None
 
         # start the build
-        stream = client.build(**build_args)
+        stream = client.api.build(**build_args)
         try:
             utils.stream_docker_logs(stream, self.buildname)
         except (ValueError, docker.errors.APIError) as e:
@@ -149,6 +150,7 @@ class BuildStep(object):
         if tempdir is not None:
             os.unlink(os.path.join(tempdir, 'Dockerfile'))
             os.rmdir(tempdir)
+
 
     def write_dockerfile(self, dockerfile):
         tempdir = os.path.abspath(os.path.join(self.build_dir, DOCKER_TMPDIR))
@@ -165,11 +167,11 @@ class BuildStep(object):
         cprint("  Building base image from %s" % image, 'blue')
         assert not image.built
 
-        stream = client.build(path=os.path.dirname(image.path),
-                              dockerfile=os.path.basename(image.path),
-                              tag=image.tag,
-                              decode=True,
-                              rm=True)
+        stream = client.api.build(path=os.path.dirname(image.path),
+                                  dockerfile=os.path.basename(image.path),
+                                  tag=image.tag,
+                                  decode=True,
+                                  rm=True)
 
         try:
             utils.stream_docker_logs(stream, image)

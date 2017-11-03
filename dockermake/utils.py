@@ -18,7 +18,8 @@ import os
 import textwrap
 
 import yaml
-import docker
+import docker.errors
+from termcolor import cprint
 
 from . import errors
 
@@ -95,7 +96,7 @@ def build_targets(args, defs, targets):
     if args.no_build:
         client = None
     else:
-        client = get_client_api()
+        client = get_client()
 
     if args.push_to_registry and args.registry_user:
         if not args.repository:
@@ -147,7 +148,7 @@ def push(client, name):
         print(warn)
     else:
         print('  Pushing %s to %s:' % (name, name.split('/')[0]))
-        stream = _linestream(client.push(name, stream=True))
+        stream = _linestream(client.api.push(name, stream=True))
         line = stream_docker_logs(stream, 'PUSH %s' % name)
 
         if 'error' in line:
@@ -216,6 +217,7 @@ def get_console_width():
 
 SHOWSIZE = set(('Pushing', 'Pulling', 'Pulled', 'Downloaded', 'Downloading'))
 
+
 def _show_xfer_state(pullstats, item):
     imgid = item['id']
     stat = item['status']
@@ -231,3 +233,20 @@ def _show_xfer_state(pullstats, item):
         return toprint
     else:
         return None
+
+
+def set_build_cachefrom(cache_from, buildargs, client):
+    if cache_from:  # use cachefrom only if at least one of the images exists
+        for image in cache_from:
+            try:
+                client.images.get(image)
+            except docker.errors.ImageNotFound:
+                pass
+            else:
+                cprint("  Build cache sources: %s" % cache_from,
+                       'blue')
+                buildargs['cache_from'] = cache_from
+                return
+        else:
+            cprint("  No build cache sources present; ignoring --cache-repo and --cache-tag",
+                   'blue')

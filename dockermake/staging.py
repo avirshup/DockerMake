@@ -105,9 +105,7 @@ class StagedFile(object):
         buildargs = dict(path=cachedir,
                          tag=newimage,
                          decode=True)
-
-        if self.cache_from:
-            buildargs['cache_from'] = self.cache_from
+        utils.set_build_cachefrom(self.cache_from, buildargs, client)
 
         # Build and show logs
         stream = client.api.build(**buildargs)
