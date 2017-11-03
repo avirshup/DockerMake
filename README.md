@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/avirshup/DockerMake.svg?branch=master)](https://travis-ci.org/avirshup/DockerMake)
 [![PyPI version](https://badge.fury.io/py/DockerMake.svg)](https://badge.fury.io/py/DockerMake)
 
-### Table of Contents
+## Table of Contents
 + [What is it?](#what-is-it)
 + [Install it](#install-it)
 + [Run it](#run-it)
@@ -17,11 +17,11 @@
 + [Example](#example)
 + [Command line usage](#command-line-usage)
 
-### What is it?
+## What is it?
 A command line tool to build and manage stacks of docker images. You can mix and match different sets of build instructions as a dependency graph to easily create an easily maintainable and extensible stack of docker images.
 
 
-### Install it
+## Install it
 
 Requires [Docker](https://www.docker.com/products/docker) and Python 2.7 or 3.5+.
 
@@ -32,7 +32,7 @@ pip install DockerMake
 This will install the command line tool, `docker-make`, and its supporting python package, which you can import as `import dockermake`. 
 
 
-### Run it
+## Run it
 
 To build some illustrative examples, try running the example in this repository:
 
@@ -44,30 +44,30 @@ docker-make final
 ```
 
 
-### What you can do with it
+## What you can do with it
 
  * Define small pieces of configuration or functionality, then mix them together into production docker images.
 
 
-##### Build automation
+#### Build automation
  * **new**: specify custom `.dockerignore` files for any given build step
  * Automated registry login and image pushes
  
-##### File handling
+#### File handling
  * Create builds that pull images from anywhere on your file system
  * Build your artifacts in a well-provisioned "build" images, then copy them into smaller images for deployment
 
 
-##### Cache control
+#### Cache control
  - Invalidate docker's build cache at any point in the build (using `--bust-cache [layer]`)
  - **new**: Use specific images to [resolve docker's build cache](https://github.com/moby/moby/issues/26065) (using `--cache-repo [repo]` and/or `--cache-tag [tag]`)
  - Force a clean rebuild without using the cache (using `--no-cache`)
 
  
-### How to write DockerMake.yml
+## How to write DockerMake.yml
 The idea is to write dockerfile commands for each specific piece of functionality in the `build` field, and "inherit" all other functionality from a list of other components that your image `requires`. If you need to add files with the ADD and COPY commands,  specify the root directory for those files with `build_directory`. Your tree of "requires" must have _exactly one_ unique named base image in the `FROM` field.
 
-#### Defining an image
+### Defining an image
 
 The DockerMake.yml file is a YAML-formatted file. To create a basic image, you simply need to define its name, its base image, and a series of Dockerfile instructions, as follows:
 
@@ -90,7 +90,7 @@ To re-use these build instructions in another image, list that image in the `req
      [additional Dockerfile instructions]
 ```
 
-#### Image definition fields
+### Image definition fields
 Image definitions can include any of the following fields:
 
 * [**`FROM`/`FROM_DOCKERFILE`**](#fromfrom_dockerfile)
@@ -101,7 +101,7 @@ Image definitions can include any of the following fields:
 * [**`description`**](#description)
 * [**`copy_from`**](#copy_from)
 
-##### **`FROM`/`FROM_DOCKERFILE`**
+#### **`FROM`/`FROM_DOCKERFILE`**
 The docker image to use as a base for this image (and those that require it). This can be either the name of an image (using `FROM`) or the path to a local Dockerfile (using `FROM_DOCKERFILE`).
 
 *Example:*
@@ -114,7 +114,7 @@ or
 baseimage:
    FROM_DOCKERFILE: ../myproject/Dockerfile
    ```
-##### **`build`**
+#### **`build`**
 Multi-line string defining dockerfile commands to build this step. Note that these commands CANNOT contain 'FROM'. See also [Notes on multi-line strings](#Notes) below.
 
 *Example:*
@@ -128,7 +128,7 @@ build-image:
      ENV editor=vi
 ```
 
-##### **`requires`**
+#### **`requires`**
 List of other image definitions to include in this one. `docker-make` will create a new image from a single DockerFile that includes an amalgamation of all image definitions.
 
 *Example:*
@@ -144,7 +144,7 @@ List of other image definitions to include in this one. `docker-make` will creat
       - my-tools
  ```
 
-##### **`build_directory`**
+#### **`build_directory`**
 Path to a directory on your filesystem. This will be used to locate files for `ADD` and `COPY` commands in your dockerfile. See [Notes on relative paths](#Notes) below.
 
 *Example:*
@@ -156,7 +156,7 @@ data-image:
     [...]
 ```
 
-##### **`ignore`/`ignorefile`**
+#### **`ignore`/`ignorefile`**
 A custom [.dockerignore](https://docs.docker.com/engine/reference/builder/#dockerignore-file) for this step. This overrides any existing `.dockerignore` file in the build context. Only relevant for `ADD` or `COPY` commands when the `build_directory` is specified. This can either be a multi-line string (using the `ignore` field)  or the path to a file (using the `ignorefile` field).
 
 *Example:*
@@ -171,10 +171,10 @@ data-image:
       *.tmp
 ```
   
-##### **`description`**
+#### **`description`**
 An arbitrary comment (ignored by `docker-make`)
 
-##### **`copy_from`**
+#### **`copy_from`**
 Used to copy files into this image _from other images_ (to copy from your filesystem or a URL, use the standard `ADD` and `COPY` dockerfile commands). This is a mapping of mappings of the form:
 ```yml
 [image-name]:
@@ -192,7 +192,7 @@ Note that, for historical reasons, these copies are performed _after_ any _build
 
  
  
-#### Notes
+### Notes
 
 **Relative paths**: Several of these fields include paths on your local filesystem. They may be absolute or relative; _relative_ paths are resolved relative to the DockerMake.yml file they appear in. Use of `~` is allowed to denote the home directory.
 
@@ -208,7 +208,7 @@ next field: [...]
 
 
 
-### Example
+## Example
 [(See also this production example)](https://github.com/molecular-toolkit/chemistry-docker-images/tree/master/makefiles)
 
 This example builds a single docker image called `data_science`. It does this by mixing together three components: `devbase` (the base image), `airline_data` (a big CSV file), and `python_image` (a python installation). `docker-make` will create an image that combines all of these components.
@@ -262,7 +262,7 @@ Here's the dependency graph and generated Dockerfiles:
 
 
 
-### Command line usage 
+## Command line usage 
 ```
 usage: docker-make [-h] [-f MAKEFILE] [-a] [-l]
                    [--requires [REQUIRES [REQUIRES ...]]] [--name NAME] [-p]
