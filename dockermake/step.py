@@ -35,11 +35,11 @@ class BuildStep(object):
         img_def (dict): yaml definition of this image
         buildname (str): what to call this image, once built
         bust_cache(bool): never use docker cache for this build step
-        from_cache (str or list): use this(these) image(s) to resolve build cache
+        cache_from (str or list): use this(these) image(s) to resolve build cache
     """
 
     def __init__(self, imagename, baseimage, img_def, buildname,
-                 build_first=None, bust_cache=False, from_cache=None):
+                 build_first=None, bust_cache=False, cache_from=None):
         self.imagename = imagename
         self.baseimage = baseimage
         self.img_def = img_def
@@ -50,10 +50,10 @@ class BuildStep(object):
         self.build_first = build_first
         self.custom_exclude = self._get_ignorefile(img_def)
         self.ignoredefs_file = img_def.get('ignorefile', img_def['_sourcefile'])
-        if from_cache and isinstance(str, from_cache):
-            self.from_cache = [from_cache]
+        if cache_from and isinstance(cache_from, str):
+            self.cache_from = [cache_from]
         else:
-            self.from_cache = from_cache
+            self.cache_from = cache_from
 
     @staticmethod
     def _get_ignorefile(img_def):
@@ -103,8 +103,8 @@ class BuildStep(object):
                           nocache=not usecache,
                           decode=True, rm=True)
 
-        if usecache and self.from_cache:
-            build_args['from_cache'] = self.from_cache
+        if usecache and self.cache_from:
+            build_args['cache_from'] = self.cache_from
 
         if self.build_dir is not None:
             tempdir = self.write_dockerfile(dockerfile)
@@ -198,7 +198,7 @@ class FileCopyStep(BuildStep):
         baseimage (str): base image for this step
         img_def (dict): yaml definition of this image
         buildname (str): what to call this image, once built
-        from_cache (str or list): use this(these) image(s) to resolve build cache
+        cache_from (str or list): use this(these) image(s) to resolve build cache
     """
     def __init__(self, sourceimage, sourcepath, destpath, *args, **kwargs):
         kwargs.pop('bust_cache', None)
@@ -214,7 +214,7 @@ class FileCopyStep(BuildStep):
             hey were applied when BUILDING self.sourceimage
         """
         stage = staging.StagedFile(self.sourceimage, self.sourcepath, self.destpath,
-                                   from_cache=self.from_cache)
+                                   cache_from=self.cache_from)
         stage.stage(self.baseimage, self.buildname)
 
     @property

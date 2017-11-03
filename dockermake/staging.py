@@ -47,15 +47,15 @@ class StagedFile(object):
         sourceimage (str): name of the image to copy from
         sourcepath (str): path in the source image
         destpath (str): path in the target image
-        from_cache (str or list): use this(these) image(s) to resolve build cache
+        cache_from (str or list): use this(these) image(s) to resolve build cache
     """
-    def __init__(self, sourceimage, sourcepath, destpath, from_cache=None):
+    def __init__(self, sourceimage, sourcepath, destpath, cache_from=None):
         self.sourceimage = sourceimage
         self.sourcepath = sourcepath
         self.destpath = destpath
         self._sourceobj = None
         self._cachedir = None
-        self.from_cache = from_cache
+        self.cache_from = cache_from
 
     def stage(self, startimage, newimage):
         """ Copies the file from source to target
@@ -106,8 +106,8 @@ class StagedFile(object):
                          tag=newimage,
                          decode=True)
 
-        if self.from_cache:
-            buildargs['from_cache'] = self.from_cache
+        if self.cache_from:
+            buildargs['cache_from'] = self.cache_from
 
         # Build and show logs
         stream = client.api.build(**buildargs)

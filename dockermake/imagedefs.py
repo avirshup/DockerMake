@@ -135,9 +135,9 @@ class ImageDefs(object):
         """
         from_image = self.get_external_base_image(image)
         if cache_repo or cache_tag:
-            from_cache = utils.generate_name(image, cache_repo, cache_tag)
+            cache_from = utils.generate_name(image, cache_repo, cache_tag)
         else:
-            from_cache = None
+            cache_from = None
         if from_image is None:
             raise errors.NoBaseError("No base image found in %s's dependencies" % image)
         if isinstance(from_image, ExternalDockerfile):
@@ -161,7 +161,7 @@ class ImageDefs(object):
                     dockermake.step.BuildStep(
                             base_name, base_image, self.ymldefs[base_name],
                             buildname, bust_cache=base_name in rebuilds,
-                            build_first=build_first, from_cache=from_cache))
+                            build_first=build_first, cache_from=cache_from))
 
             base_image = buildname
             build_first = None
@@ -176,7 +176,7 @@ class ImageDefs(object):
                                     sourceimage, sourcepath, destpath,
                                     base_name, base_image, self.ymldefs[base_name],
                                     buildname, bust_cache=base_name in rebuilds,
-                                    build_first=build_first, from_cache=from_cache))
+                                    build_first=build_first, cache_from=cache_from))
                     base_image = buildname
 
         sourcebuilds = [self.generate_build(img, img, cache_repo=cache_repo, cache_tag=cache_tag)
