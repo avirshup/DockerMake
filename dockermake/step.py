@@ -94,7 +94,8 @@ class BuildStep(object):
             usecache = False
 
         if not usecache:
-            print('   INFO: Docker caching disabled - forcing rebuild')
+            cprint('  Build cache disabled - this image will be rebuilt from scratch',
+                   'yellow')
 
         dockerfile = u'\n'.join(self.dockerfile_lines)
 
@@ -103,8 +104,8 @@ class BuildStep(object):
                           nocache=not usecache,
                           decode=True, rm=True)
 
-        if usecache and self.cache_from:
-            build_args['cache_from'] = self.cache_from
+        if usecache:
+            utils.set_build_cachefrom(self.cache_from, build_args, client)
 
         if self.build_dir is not None:
             tempdir = self.write_dockerfile(dockerfile)
@@ -149,6 +150,7 @@ class BuildStep(object):
         if tempdir is not None:
             os.unlink(os.path.join(tempdir, 'Dockerfile'))
             os.rmdir(tempdir)
+
 
     def write_dockerfile(self, dockerfile):
         tempdir = os.path.abspath(os.path.join(self.build_dir, DOCKER_TMPDIR))

@@ -217,6 +217,7 @@ def get_console_width():
 
 SHOWSIZE = set(('Pushing', 'Pulling', 'Pulled', 'Downloaded', 'Downloading'))
 
+
 def _show_xfer_state(pullstats, item):
     imgid = item['id']
     stat = item['status']
@@ -232,3 +233,20 @@ def _show_xfer_state(pullstats, item):
         return toprint
     else:
         return None
+
+
+def set_build_cachefrom(cache_from, buildargs, client):
+    if cache_from:  # use cachefrom only if at least one of the images exists
+        for image in cache_from:
+            try:
+                client.images.get(image)
+            except docker.errors.ImageNotFound:
+                pass
+            else:
+                cprint("  Build cache sources: %s" % cache_from,
+                       'blue')
+                buildargs['cache_from'] = cache_from
+                return
+        else:
+            cprint("  No build cache sources present; ignoring --cache-repo and --cache-tag",
+                   'blue')

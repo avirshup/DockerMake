@@ -76,8 +76,9 @@ def test_no_cache(twin_simple_targets):
     image1, image2 = twin_simple_targets
     assert image1.id != image2.id
 
-
-def test_explicit_cache_from(twin_simple_targets, docker_client):
+clean8 = creates_images('img1repo/simple-target:img1tag',
+                        'img2repo/simple-target:img2tag')
+def test_explicit_cache_from(twin_simple_targets, docker_client, clean8):
     image1, image2 = twin_simple_targets
     image1.tag('img1repo/simple-target', tag='img1tag')
     image2.tag('img2repo/simple-target', tag='img2tag')
@@ -86,6 +87,15 @@ def test_explicit_cache_from(twin_simple_targets, docker_client):
                     ' --cache-repo img1repo --cache-tag img1tag')
     final_image = docker_client.images.get('simple-target')
     assert final_image.id == image1.id
+
+
+def test_cache_fallback(twin_simple_targets, docker_client):
+    image1, image2 = twin_simple_targets
+
+    run_docker_make('-f data/simple.yml simple-target'
+                    ' --cache-repo fakerepo --cache-tag faketag')
+    final_image = docker_client.images.get('simple-target')
+    assert final_image.id == image2.id
 
 
 def _check_files(img, **present):
