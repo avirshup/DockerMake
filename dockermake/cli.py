@@ -82,6 +82,7 @@ def make_arg_parser():
                     help="Print version and exit.")
     hh.add_argument('--help-yaml', action='store_true',
                     help="Print summary of YAML file format and exit.")
+    hh.add_argument('--debug', action='store_true')
 
     return parser
 

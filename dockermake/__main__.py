@@ -25,16 +25,20 @@ from .imagedefs import ImageDefs
 from . import errors
 
 
+RED_ERROR = termcolor.colored('FATAL ERROR:', 'red')
+
 def main():
     parser = cli.make_arg_parser()
     args = parser.parse_args()
 
-    try:
+    if args.debug:
         run(args)
-    except errors.UserException as exc:
-        red_error = termcolor.colored('FATAL ERROR:', 'red')
-        print(red_error, exc.args[0], file=sys.stderr)
-        sys.exit(exc.CODE)
+    else:
+        try:
+            run(args)
+        except (errors.UserException, errors.BuildError) as exc:
+            print(RED_ERROR, exc.args[0], file=sys.stderr)
+            sys.exit(exc.CODE)
 
 
 def _runargs(argstring):

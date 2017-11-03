@@ -43,13 +43,12 @@ class ImageDefs(object):
         print('Copy cache directory: %s' % staging.TMPDIR)
         try:
             self.ymldefs = self.parse_yaml(self.makefile_path)
+        except errors.UserException:
+            raise
         except Exception as exc:
-            if isinstance(exc, errors.UserException):
-                raise
-            else:
-                raise errors.ParsingFailure('Failed to read file %s:\n' % self.makefile_path +
-                                            str(exc))
-        self.all_targets = self.ymldefs.pop('_ALL_', None)
+            raise errors.ParsingFailure('Failed to read file %s:\n' % self.makefile_path +
+                                        str(exc))
+        self.all_targets = self.ymldefs.pop('_ALL_', [])
         self._external_dockerfiles = {}
 
     def parse_yaml(self, filename):
@@ -92,6 +91,20 @@ class ImageDefs(object):
             for key in ('build_directory', 'FROM_DOCKERFILE', 'ignorefile'):
                 if key in defn:
                     defn[key] = _get_abspath(pathroot, defn[key])
+
+            if 'copy_from' in defn:
+                if not isinstance(defn['copy_from'], dict):
+                    raise errors.ParsingFailure((
+                            'Syntax error in file "%s": \n' +
+                            'The "copy_from" field in image definition "%s" is not \n' 
+                            'a key:value list.') % (ymlfilepath, imagename))
+                for otherimg, value in defn.get('copy_from', {}).items():
+                    if not isinstance(value, dict):
+                        raise errors.ParsingFailure((
+                            'Syntax error in field:\n'
+                            '     %s . copy_from . %s\nin file "%s". \n'
+                            'All entries must be of the form "sourcepath: destpath"')%
+                                 (imagename, otherimg, ymlfilepath))
 
             # save the file path for logging
             defn['_sourcefile'] = relpath

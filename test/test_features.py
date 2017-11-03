@@ -1,3 +1,4 @@
+import os
 import pytest
 from dockermake.__main__ import _runargs as run_docker_make
 
@@ -48,6 +49,11 @@ img6 = creates_images('target_ignore_directory')
 def test_ignore_directory(img6):
     run_docker_make('-f data/ignores.yml target_ignore_directory')
     _check_files('target_ignore_directory', d=False)
+
+
+def test_dockerfile_write(tmpdir):
+    run_docker_make('-f data/write.yml -p -n --dockerfile-dir %s writetarget' % tmpdir)
+    assert os.path.isfile(os.path.join(tmpdir, 'Dockerfile.writetarget'))
 
 
 def _check_files(img, **present):
