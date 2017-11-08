@@ -113,14 +113,14 @@ def build_targets(args, defs, targets):
                                     generate_name(t, args.repository, args.tag),
                                     rebuilds=args.bust_cache,
                                     cache_repo=args.cache_repo,
-                                    cache_tag=args.cache_tag)
+                                    cache_tag=args.cache_tag,
+                                    keepbuildtags=args.keep_build_tags)
                 for t in targets]
     for b in builders:
         b.build(client,
                 nobuild=args.no_build,
                 usecache=not args.no_cache,
-                pull=args.pull,
-                keepbuildtags=args.keep_build_tags)
+                pull=args.pull)
         if not args.no_build:
             print('  docker-make built:', b.targetname)
 

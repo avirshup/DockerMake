@@ -121,7 +121,8 @@ class ImageDefs(object):
                             'Field "%s" in image "%s" in file "%s" not recognized' %
                             (key, imagename, relpath))
 
-    def generate_build(self, image, targetname, rebuilds=None, cache_repo='', cache_tag=''):
+    def generate_build(self, image, targetname, rebuilds=None, cache_repo='', cache_tag='',
+                       **kwargs):
         """
         Separate the build into a series of one or more intermediate steps.
         Each specified build directory gets its own step
@@ -132,6 +133,7 @@ class ImageDefs(object):
             rebuilds (List[str]): list of image layers to rebuild (i.e., without docker's cache)
             cache_repo (str): repository to get images for caches in builds
             cache_tag (str): tags to use from repository for caches in builds
+            **kwargs (dict): extra keyword arguments for the BuildTarget object
         """
         from_image = self.get_external_base_image(image)
         if cache_repo or cache_tag:
@@ -179,14 +181,19 @@ class ImageDefs(object):
                                     build_first=build_first, cache_from=cache_from))
                     base_image = buildname
 
-        sourcebuilds = [self.generate_build(img, img, cache_repo=cache_repo, cache_tag=cache_tag)
+        sourcebuilds = [self.generate_build(img,
+                                            img,
+                                            cache_repo=cache_repo,
+                                            cache_tag=cache_tag,
+                                            **kwargs)
                         for img in sourceimages]
 
         return builds.BuildTarget(imagename=image,
                                   targetname=targetname,
                                   steps=build_steps,
                                   sourcebuilds=sourcebuilds,
-                                  from_image=from_image)
+                                  from_image=from_image,
+                                  **kwargs)
 
     def sort_dependencies(self, image, dependencies=None):
         """
