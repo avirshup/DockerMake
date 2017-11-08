@@ -119,7 +119,8 @@ def build_targets(args, defs, targets):
         b.build(client,
                 nobuild=args.no_build,
                 usecache=not args.no_cache,
-                pull=args.pull)
+                pull=args.pull,
+                keepbuildtags=args.keep_build_tags)
         if not args.no_build:
             print('  docker-make built:', b.targetname)
 

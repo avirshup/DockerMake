@@ -107,3 +107,10 @@ def _check_files(img, **present):
             assert_file_content(img, record['path'], record['content'])
 
 
+twostep = creates_images('target-twostep',
+                         'dmkbuild_target-twostep_2',
+                         'dmkbuild_target-twostep_1')
+def test_keep_build_tags(twostep, docker_client):
+    run_docker_make('-f data/twostep.yml target-twostep --keep-build-tags')
+    docker_client.images.get('dmkbuild_target-twostep_1')
+    docker_client.images.get('dmkbuild_target-twostep_2')

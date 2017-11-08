@@ -1,0 +1,10 @@
+first:
+  FROM: python:3.6-slim
+  build: |
+    RUN echo 'test' > /opt/test
+
+target-twostep:
+  requires:
+    - first
+  build: |
+    RUN echo 'test2' > /opt/test2

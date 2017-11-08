@@ -66,6 +66,8 @@ def make_arg_parser():
                     'multiple image layers by passing --bust-cache multiple times.')
     ca.add_argument('--clear-copy-cache', '--clear-cache', action='store_true',
                     help="Remove docker-make's cache of files for `copy-from`.")
+    ca.add_argument('--keep-build-tags', action='store_true',
+                    help="Don't untag intermediate build containers when build is complete")
 
     rt = parser.add_argument_group('Repositories and tags')
     rt.add_argument('--repository', '-r', '-u',
