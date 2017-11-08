@@ -34,13 +34,15 @@ class BuildTarget(object):
         steps (List[BuildStep]): list of steps required to build this image
         stagedfiles (List[StagedFile]): list of files to stage into this image from other images
         from_image (str): External base image name
+        keepbuildtags (bool): Keep intermediate build tags (dmkbuild_[target]_[stepnum])
     """
-    def __init__(self, imagename, targetname, steps, sourcebuilds, from_image):
+    def __init__(self, imagename, targetname, steps, sourcebuilds, from_image, keepbuildtags=False):
         self.imagename = imagename
         self.steps = steps
         self.sourcebuilds = sourcebuilds
         self.targetname = targetname
         self.from_image = from_image
+        self.keepbuildtags = keepbuildtags
 
     def write_dockerfile(self, output_dir):
         """ Used only to write a Dockerfile that will NOT be built by docker-make
@@ -61,7 +63,6 @@ class BuildTarget(object):
 
     def build(self, client,
               nobuild=False,
-              keepbuildtags=False,
               usecache=True,
               pull=False):
         """
@@ -70,7 +71,6 @@ class BuildTarget(object):
         Args:
             client (docker.Client): docker client object that will build the image
             nobuild (bool): just create dockerfiles, don't actually build the image
-            keepbuildtags (bool): keep tags on intermediate images
             usecache (bool): use docker cache, or rebuild everything from scratch?
             pull (bool): try to pull new versions of repository images?
         """
@@ -111,7 +111,7 @@ class BuildTarget(object):
         finalimage = step.buildname
 
         if not nobuild:
-            self.finalizenames(client, finalimage, keepbuildtags)
+            self.finalizenames(client, finalimage)
             line = 'FINISHED BUILDING "%s" (image definition "%s" from %s)'%(
                 self.targetname, self.imagename, self.steps[-1].sourcefile)
             cprint(_centered(line, width),
@@ -139,13 +139,13 @@ class BuildTarget(object):
             cprint('Finished with build image "%s"\n' % build.targetname,
                    color='green')
 
-    def finalizenames(self, client, finalimage, keepbuildtags):
+    def finalizenames(self, client, finalimage):
         """ Tag the built image with its final name and untag intermediate containers
         """
         client.api.tag(finalimage, *self.targetname.split(':'))
         cprint('Tagged final image as "%s"' % self.targetname,
                'green')
-        if not keepbuildtags:
+        if not self.keepbuildtags:
             print('Untagging intermediate containers:', end='')
             for step in self.steps:
                 client.api.remove_image(step.buildname, force=True)
