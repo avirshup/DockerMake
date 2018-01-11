@@ -114,3 +114,9 @@ def test_keep_build_tags(twostep, docker_client):
     run_docker_make('-f data/twostep.yml target-twostep --keep-build-tags')
     docker_client.images.get('dmkbuild_target-twostep_1')
     docker_client.images.get('dmkbuild_target-twostep_2')
+
+
+buildargs = creates_images('target-buildargs')
+def test_build_args(buildargs):
+    run_docker_make('-f data/build-args.yml --build-arg FILENAME=hello-world.txt target-buildargs')
+    assert_file_content('target-buildargs', 'hello-world.txt', 'hello world')
