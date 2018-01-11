@@ -19,7 +19,7 @@ import textwrap
 
 import yaml
 import docker.errors
-from termcolor import cprint
+from termcolor import cprint, colored
 
 from . import errors
 
@@ -106,15 +106,20 @@ def build_targets(args, defs, targets):
                      password=args.registry_token,
                      registry=registry,
                      reauth=True)
-        print("\nREGISTRY LOGIN SUCCESS:",registry)
+        print("\nREGISTRY LOGIN SUCCESS:", registry)
 
+    if args.build_arg:
+        buildargs = _make_buildargs(args.build_arg)
+    else:
+        buildargs = None
     built, warnings = [], []
     builders = [defs.generate_build(t,
                                     generate_name(t, args.repository, args.tag),
                                     rebuilds=args.bust_cache,
                                     cache_repo=args.cache_repo,
                                     cache_tag=args.cache_tag,
-                                    keepbuildtags=args.keep_build_tags)
+                                    keepbuildtags=args.keep_build_tags,
+                                    buildargs=buildargs)
                 for t in targets]
     for b in builders:
         b.build(client,
@@ -137,6 +142,22 @@ def build_targets(args, defs, targets):
                 built[-1] += ' -- pushed to %s' % b.targetname.split('/')[0]
 
     return built, warnings
+
+
+def _make_buildargs(build_args):
+    if build_args:
+        cprint('Build arguments:', attrs=['bold'])
+    argdict = {}
+    for buildarg in build_args:
+        try:
+            split = buildarg.index('=')
+        except ValueError:
+            raise errors.CLIError('Buildarg options must be passed as --build-arg NAME=VALUE')
+        argname = buildarg[:split]
+        argval = buildarg[split+1:]
+        argdict[argname] = argval
+        print('   -', colored(argname, 'yellow'), '=', colored(argval, 'blue'))
+    return argdict
 
 
 def push(client, name):
