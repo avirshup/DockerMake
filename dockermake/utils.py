@@ -81,7 +81,7 @@ def get_build_targets(args, defs):
     elif args.all:
         # build all targets in the file
         assert len(args.TARGETS) == 0, "Pass either a list of targets or `--all`, not both"
-        if defs.all_targets is not None:
+        if defs.all_targets:
             targets = defs.all_targets
         else:
             targets = list(defs.ymldefs.keys())
