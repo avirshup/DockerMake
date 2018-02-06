@@ -3,6 +3,8 @@ Dockerfile.fail
 _docker_make_tmp
 dockerfile.fail
 MANIFEST
+codeship.aes
+tokens
 
 # IntelliJ project files
 .idea

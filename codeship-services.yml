@@ -1,0 +1,30 @@
+base-build: &base-build
+  build:
+    context: .
+    dockerfile: Dockerfile
+  add_docker: true
+  working_dir: /opt
+
+python2.7:
+  <<: *base-build
+  build:
+    context: .
+    dockerfile: Dockerfile
+    args:
+      BASEIMAGE: python:2.7-slim
+
+python3.5:
+  <<: *base-build
+  build:
+    context: .
+    dockerfile: Dockerfile
+    args:
+      BASEIMAGE: python:3.5-slim
+
+python3.6:
+  <<: *base-build
+  build:
+    context: .
+    dockerfile: Dockerfile
+    args:
+      BASEIMAGE: python:3.6-slim
