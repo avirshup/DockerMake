@@ -13,7 +13,7 @@ from __future__ import print_function
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from io import StringIO
+from io import BytesIO
 import pprint
 from termcolor import cprint
 
@@ -84,12 +84,12 @@ class BuildError(Exception):
     def __init__(self, dockerfile, item, build_args):
         with open('dockerfile.fail', 'w') as dff:
             print(dockerfile, file=dff)
-        with StringIO() as stream:
+        with BytesIO() as stream:
             cprint('Docker build failure', 'red', attrs=['bold'], file=stream)
-            print(u'\n   -------- Docker daemon output --------', file=stream)
+            print('\n   -------- Docker daemon output --------', file=stream)
             pprint.pprint(item, stream, indent=4)
-            print(u'   -------- Arguments to client.build --------', file=stream)
+            print('   -------- Arguments to client.build --------', file=stream)
             pprint.pprint(build_args, stream, indent=4)
-            print(u'This dockerfile was written to dockerfile.fail', file=stream)
+            print('This dockerfile was written to dockerfile.fail', file=stream)
             stream.seek(0)
             super(BuildError, self).__init__(stream.read())
