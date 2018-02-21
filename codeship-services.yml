@@ -17,6 +17,8 @@ dmk-python3.5:
       PYVERSION: "3.5"
 
 dmk-python3.6:
+  volumes:
+    - "./codeship-distfiles:/opt/DockerMake/dist"
   add_docker: true
   working_dir: /opt/DockerMake/test
   build:
@@ -39,6 +41,6 @@ dmk-deploy-img:
     context: deployment/
     dockerfile: Dockerfile.deploy
   encrypted_env_file: deployment/tokens.crypt
-  encrypted_docker_cfg: deployment/dockercfg.crypt
+  encrypted_dockercfg_path: deployment/dockercfg.crypt
   volumes:
     - "./codeship-distfiles:/opt/distfiles"
