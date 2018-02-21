@@ -8,6 +8,6 @@
     - command: pwd
 
 - name: dmk-deploy
-  service: dmk-deploy-image
+  service: dmk-deploy-img
   command: deployment/deploy.sh
   tag: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)((a|rc|b)(0|[1-9]\d*))?$' # PEP440 version tags

@@ -1,31 +1,27 @@
-dmk-base-build: &base-build
-  build:
-    context: .
-    dockerfile: Dockerfile
+dmk-python2.7:
   add_docker: true
   working_dir: /opt/DockerMake/test
-
-dmk-python2.7:
-  <<: *base-build
   build:
-    context: .
     dockerfile: Dockerfile
+    context: .
     args:
       PYVERSION: "2.7"
 
 dmk-python3.5:
-  <<: *base-build
+  add_docker: true
+  working_dir: /opt/DockerMake/test
   build:
-    context: .
     dockerfile: Dockerfile
+    context: .
     args:
       PYVERSION: "3.5"
 
 dmk-python3.6:
-  <<: *base-build
+  add_docker: true
+  working_dir: /opt/DockerMake/test
   build:
-    context: .
     dockerfile: Dockerfile
+    context: .
     args:
       PYVERSION: "3.6"
 
