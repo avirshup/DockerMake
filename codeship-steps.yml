@@ -5,9 +5,9 @@
     - dmk-python3.5
     - dmk-python3.6
   steps:
-    - command: pwd
+    - command: py.test
 
 - name: dmk-deploy
   service: dmk-deploy-img
-  command: deployment/deploy.sh
+  command: deploy.sh
   tag: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)((a|rc|b)(0|[1-9]\d*))?$' # PEP440 version tags

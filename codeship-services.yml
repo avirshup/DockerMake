@@ -28,5 +28,5 @@ dmk-python3.6:
 
 dmk-deploy-img:
   build:
-    dockerfile: deployment/Dockerfile
+    dockerfile: deployment/Dockerfile.deploy
   encrypted_env_file: deployment/tokens.crypt
