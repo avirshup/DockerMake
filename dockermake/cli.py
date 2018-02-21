@@ -31,6 +31,9 @@ def make_arg_parser():
                     help="Print or build all images (or those specified by _ALL_)")
     bo.add_argument('-l', '--list', action='store_true',
                     help='List all available targets in the file, then exit.')
+    bo.add_argument('--build-arg', action='append',
+                    help="Set build-time variables (used the same way as docker build --build-arg)"
+                    ', e.g., `... --build-arg VAR1=val1 --build-arg VAR2=val2`')
     bo.add_argument('--requires', nargs="*",
                     help='Build a special image from these requirements. Requires --name')
     bo.add_argument('--name', type=str,

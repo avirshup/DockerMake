@@ -36,10 +36,12 @@ class BuildStep(object):
         buildname (str): what to call this image, once built
         bust_cache(bool): never use docker cache for this build step
         cache_from (str or list): use this(these) image(s) to resolve build cache
+        buildargs (dict): build-time "buildargs" for dockerfiles
     """
 
     def __init__(self, imagename, baseimage, img_def, buildname,
-                 build_first=None, bust_cache=False, cache_from=None):
+                 build_first=None, bust_cache=False, cache_from=None,
+                 buildargs=None):
         self.imagename = imagename
         self.baseimage = baseimage
         self.img_def = img_def
@@ -50,6 +52,7 @@ class BuildStep(object):
         self.build_first = build_first
         self.custom_exclude = self._get_ignorefile(img_def)
         self.ignoredefs_file = img_def.get('ignorefile', img_def['_sourcefile'])
+        self.buildargs = buildargs
         if cache_from and isinstance(cache_from, str):
             self.cache_from = [cache_from]
         else:
@@ -99,24 +102,25 @@ class BuildStep(object):
 
         dockerfile = u'\n'.join(self.dockerfile_lines)
 
-        build_args = dict(tag=self.buildname,
-                          pull=pull,
-                          nocache=not usecache,
-                          decode=True, rm=True)
+        kwargs = dict(tag=self.buildname,
+                      pull=pull,
+                      nocache=not usecache,
+                      decode=True, rm=True,
+                      buildargs=self.buildargs)
 
         if usecache:
-            utils.set_build_cachefrom(self.cache_from, build_args, client)
+            utils.set_build_cachefrom(self.cache_from, kwargs, client)
 
         if self.build_dir is not None:
             tempdir = self.write_dockerfile(dockerfile)
             context_path = os.path.abspath(os.path.expanduser(self.build_dir))
-            build_args.update(fileobj=None,
+            kwargs.update(fileobj=None,
                               dockerfile=os.path.join(DOCKER_TMPDIR, 'Dockerfile'))
             print(colored('  Build context:', 'blue'),
                   colored(os.path.relpath(context_path), 'blue', attrs=['bold']))
 
             if not self.custom_exclude:
-                build_args.update(path=context_path)
+                kwargs.update(path=context_path)
             else:
                 print(colored('  Custom .dockerignore from:','blue'),
                       colored(os.path.relpath(self.ignoredefs_file),  'blue', attrs=['bold']))
@@ -124,27 +128,27 @@ class BuildStep(object):
                                            exclude=self.custom_exclude,
                                            dockerfile=os.path.join(DOCKER_TMPDIR, 'Dockerfile'),
                                            gzip=False)
-                build_args.update(fileobj=context,
+                kwargs.update(fileobj=context,
                                   custom_context=True)
 
         else:
             if sys.version_info.major == 2:
-                build_args.update(fileobj=StringIO(dockerfile),
+                kwargs.update(fileobj=StringIO(dockerfile),
                                   path=None,
                                   dockerfile=None)
             else:
-                build_args.update(fileobj=BytesIO(dockerfile.encode('utf-8')),
+                kwargs.update(fileobj=BytesIO(dockerfile.encode('utf-8')),
                                   path=None,
                                   dockerfile=None)
 
             tempdir = None
 
         # start the build
-        stream = client.api.build(**build_args)
+        stream = client.api.build(**kwargs)
         try:
             utils.stream_docker_logs(stream, self.buildname)
         except (ValueError, docker.errors.APIError) as e:
-            raise errors.BuildError(dockerfile, str(e), build_args)
+            raise errors.BuildError(dockerfile, str(e), kwargs)
 
         # remove the temporary dockerfile
         if tempdir is not None:

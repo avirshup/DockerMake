@@ -122,7 +122,7 @@ class ImageDefs(object):
                             (key, imagename, relpath))
 
     def generate_build(self, image, targetname, rebuilds=None, cache_repo='', cache_tag='',
-                       **kwargs):
+                       buildargs=None, **kwargs):
         """
         Separate the build into a series of one or more intermediate steps.
         Each specified build directory gets its own step
@@ -133,6 +133,7 @@ class ImageDefs(object):
             rebuilds (List[str]): list of image layers to rebuild (i.e., without docker's cache)
             cache_repo (str): repository to get images for caches in builds
             cache_tag (str): tags to use from repository for caches in builds
+            buildargs (dict): build-time dockerfile arugments
             **kwargs (dict): extra keyword arguments for the BuildTarget object
         """
         from_image = self.get_external_base_image(image)
@@ -163,7 +164,8 @@ class ImageDefs(object):
                     dockermake.step.BuildStep(
                             base_name, base_image, self.ymldefs[base_name],
                             buildname, bust_cache=base_name in rebuilds,
-                            build_first=build_first, cache_from=cache_from))
+                            build_first=build_first, cache_from=cache_from,
+                            buildargs=buildargs))
 
             base_image = buildname
             build_first = None

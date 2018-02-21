@@ -1,0 +1,5 @@
+target-buildargs:
+   FROM: continuumio/miniconda3
+   build: |
+     ARG FILENAME
+     RUN echo 'hello world' > ${FILENAME}

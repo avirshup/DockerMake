@@ -74,6 +74,10 @@ class MultipleIgnoreError(UserException):
     CODE = 51
 
 
+class CLIError(UserException):
+    CODE = 52
+
+
 class BuildError(Exception):
     CODE = 200
 
