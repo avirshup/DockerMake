@@ -21,10 +21,15 @@ python3.5:
     args:
       BASEIMAGE: python:3.5-slim
 
-python3.6:
+python3.6: &base-3.6
   <<: *base-build
   build:
     context: .
     dockerfile: Dockerfile
     args:
       BASEIMAGE: python:3.6-slim
+
+
+deploy-img:
+  << *base-3.6
+  encrypted_env_file: deployment/tokens.crypt

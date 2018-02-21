@@ -4,7 +4,7 @@ _docker_make_tmp
 dockerfile.fail
 MANIFEST
 codeship.aes
-tokens
+deployment/tokens
 
 # IntelliJ project files
 .idea
