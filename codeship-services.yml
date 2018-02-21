@@ -25,7 +25,7 @@ dmk-python3.6:
     args:
       PYVERSION: "3.6"
 
-avirshup/DockerMake:  # this is the deployment artifact
+avirshup/docker-make:  # this is the deployment artifact
   build:
     dockerfile: Dockerfile
     context: .
