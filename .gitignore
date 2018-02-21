@@ -5,6 +5,7 @@ dockerfile.fail
 MANIFEST
 codeship.aes
 deployment/tokens
+deployment/config.json
 
 # IntelliJ project files
 .idea

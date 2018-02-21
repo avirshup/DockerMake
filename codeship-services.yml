@@ -25,8 +25,20 @@ dmk-python3.6:
     args:
       PYVERSION: "3.6"
 
+avirshup/DockerMake:  # this is the deployment artifact
+  build:
+    dockerfile: Dockerfile
+    context: .
+    args:
+      PYVERSION: "3.6"
+
 
 dmk-deploy-img:
+  add_docker: true
   build:
-    dockerfile: deployment/Dockerfile.deploy
+    context: deployment/
+    dockerfile: Dockerfile.deploy
   encrypted_env_file: deployment/tokens.crypt
+  encrypted_docker_cfg: deployment/dockercfg.crypt
+  volumes:
+    - "./codeship-distfiles:/opt/distfiles"

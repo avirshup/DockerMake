@@ -7,7 +7,17 @@
   steps:
     - command: py.test
 
-- name: dmk-deploy
+
+- name: deploy-dockerhub
+  type: push
+  service: dmk-deploy-img
+  tag: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)((a|rc|b)(0|[1-9]\d*))?$' # PEP440 version tags
+  image_name: avirshup/DockerMake
+  image_tag: "{{.Branch}}"
+  registry: https://index.docker.io/v1
+
+
+- name: deploy-pypi
   service: dmk-deploy-img
   command: deploy.sh
   tag: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)((a|rc|b)(0|[1-9]\d*))?$' # PEP440 version tags
