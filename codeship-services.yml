@@ -1,35 +1,36 @@
-base-build: &base-build
+dmk-base-build: &base-build
   build:
     context: .
     dockerfile: Dockerfile
   add_docker: true
-  working_dir: /opt
+  working_dir: /opt/DockerMake/test
 
-python2.7:
+dmk-python2.7:
   <<: *base-build
   build:
     context: .
     dockerfile: Dockerfile
     args:
-      BASEIMAGE: python:2.7-slim
+      PYVERSION: "2.7"
 
-python3.5:
+dmk-python3.5:
   <<: *base-build
   build:
     context: .
     dockerfile: Dockerfile
     args:
-      BASEIMAGE: python:3.5-slim
+      PYVERSION: "3.5"
 
-python3.6: &base-3.6
+dmk-python3.6:
   <<: *base-build
   build:
     context: .
     dockerfile: Dockerfile
     args:
-      BASEIMAGE: python:3.6-slim
+      PYVERSION: "3.6"
 
 
-deploy-img:
-  << *base-3.6
+dmk-deploy-img:
+  build:
+    dockerfile: deployment/Dockerfile
   encrypted_env_file: deployment/tokens.crypt

@@ -1,8 +1,13 @@
 - name: test
   type: serial
   services:
-    - python2.7
-    - python3.5
-    - python3.6
+    - dmk-python2.7
+    - dmk-python3.5
+    - dmk-python3.6
   steps:
-    - command: bash -c "cd /opt/DockerMake/test && py.test"
+    - command: pwd
+
+- name: dmk-deploy
+  service: dmk-deploy-image
+  command: deployment/deploy.sh
+  tag: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)((a|rc|b)(0|[1-9]\d*))?$' # PEP440 version tags
