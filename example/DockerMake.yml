@@ -5,7 +5,7 @@ devbase:
  requires:
    - base_image
  build: |
-  RUN apt-get -y update && apt-get -y install wget
+  RUN apk add --no-cache wget
   RUN mkdir -p /opt
 
 data_image:
@@ -32,7 +32,7 @@ blank_file_build:
   description: |
     This image isn't intended for deployment! Rather, files built in this environment
     can be copied into other images (see data_science.copy_from below)
-  FROM: debian:jessie
+  FROM: busybox
   build: |
     RUN mkdir -p /data
     RUN dd if=/dev/zero of=/data/file.txt count=1024 bs=1024
@@ -41,9 +41,7 @@ python_image:
  requires:
   - devbase
  build: |
-  RUN apt-get install -y \
-    python \
-    python-pip
+  RUN apk add --no-cache python py-pip
   RUN pip install Pint
 
 data_science:

@@ -1,8 +1,12 @@
+codeship-distfiles
 docker_makefiles
 Dockerfile.fail
 _docker_make_tmp
 dockerfile.fail
 MANIFEST
+codeship.aes
+deployment/tokens
+deployment/config.json
 
 # IntelliJ project files
 .idea

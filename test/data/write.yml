@@ -1,5 +1,5 @@
 writetarget:
-  FROM: miniconda
+  FROM: python:3.6-slim
   description: "For testing write capabilities, not meant to be built"
   copy_from:
     temp:

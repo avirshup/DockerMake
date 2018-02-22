@@ -1,8 +1,8 @@
 base3:
-  FROM: continuumio/miniconda3
+  FROM: python:3.6-slim
 
 base2:
-  FROM: continuumio/miniconda
+  FROM: python:2.7-slim
 
 install_something:
   description: "Not really java :)"
@@ -14,7 +14,7 @@ install_something:
 target3_bases:
   requires:
     - install_something
-  FROM: continuumio/miniconda3
+  FROM: python:3.6-slim
   build: RUN echo success3 > /opt/success
 
 target2_bases:
