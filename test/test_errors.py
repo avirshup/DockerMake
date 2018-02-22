@@ -15,6 +15,7 @@ ERROR_CODES = {
     'data/invalid_requires.yml': errors.InvalidRequiresList,
     'data/invalid_yaml.yml': errors.ParsingFailure,
     'data/multi_ignore.yml': errors.MultipleIgnoreError,
+    'data/buildfailure.yml': errors.BuildError
 }
 
 

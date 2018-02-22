@@ -1,0 +1,5 @@
+target:
+  description: Build commands fail
+  FROM: alpine
+  build: |
+    RUN exit 1
