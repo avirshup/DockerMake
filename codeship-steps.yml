@@ -1,16 +1,19 @@
+- name: build-pkg
+  service: avirshup/docker-make
+  command: sh -c 'cp -v /opt/DockerMake/dist/DockerMake-*.tar.gz /opt/distfiles/'
+
 - name: test
   type: serial
   services:
-    - dmk-python2.7
-    - dmk-python3.5
-    - dmk-python3.6
+    - testenv-python2.7
+    - testenv-python3.5
+    - testenv-python3.6
   steps:
-    - command: py.test
-
+    - command: sh -c "pip install /opt/distfiles/DockerMake-*.tar.gz && py.test"
 
 - name: deploy-dockerhub
   type: push
-  service: dmk-deploy-img
+  service: deploy-env
   tag: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)((a|rc|b)(0|[1-9]\d*))?$' # PEP440 version tags
   image_name: avirshup/docker-make
   image_tag: "{{.Branch}}"
@@ -18,6 +21,6 @@
 
 
 - name: deploy-pypi
-  service: dmk-deploy-img
-  command: deploy.sh
+  service: deploy-env
+  command: twine upload -u ${PYPI_USER} -p ${PYPI_PASSWORD} /opt/distfiles/DockerMake-${CI_BRANCH}.tar.gz
   tag: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)((a|rc|b)(0|[1-9]\d*))?$' # PEP440 version tags

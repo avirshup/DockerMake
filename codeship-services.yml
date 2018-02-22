@@ -1,41 +1,44 @@
-dmk-python2.7:
-  add_docker: true
-  working_dir: /opt/DockerMake/test
-  build:
-    dockerfile: Dockerfile
-    context: .
-    args:
-      PYVERSION: "2.7"
-
-dmk-python3.5:
-  add_docker: true
-  working_dir: /opt/DockerMake/test
-  build:
-    dockerfile: Dockerfile
-    context: .
-    args:
-      PYVERSION: "3.5"
-
-dmk-python3.6:
-  volumes:
-    - "./codeship-distfiles:/opt/DockerMake/dist"
-  add_docker: true
-  working_dir: /opt/DockerMake/test
-  build:
-    dockerfile: Dockerfile
-    context: .
-    args:
-      PYVERSION: "3.6"
-
 avirshup/docker-make:  # this is the deployment artifact
   build:
     dockerfile: Dockerfile
     context: .
+  volumes:
+   - "./codeship-distfiles:/opt/distfiles"
+
+testenv-python2.7:
+  add_docker: true
+  working_dir: /opt/test
+  volumes:
+   - "./codeship-distfiles:/opt/distfiles"
+  build:
+    context: .
+    dockerfile: deployment/Dockerfile.testenv
+    args:
+      PYVERSION: "2.7"
+
+testenv-python3.5:
+  add_docker: true
+  working_dir: /opt/test
+  volumes:
+   - "./codeship-distfiles:/opt/distfiles"
+  build:
+    context: .
+    dockerfile: deployment/Dockerfile.testenv
+    args:
+      PYVERSION: "3.5"
+
+testenv-python3.6:
+  add_docker: true
+  working_dir: /opt/test
+  volumes:
+   - "./codeship-distfiles:/opt/distfiles"
+  build:
+    context: .
+    dockerfile: deployment/Dockerfile.testenv
     args:
       PYVERSION: "3.6"
 
-
-dmk-deploy-img:
+deploy-env:
   add_docker: true
   build:
     context: deployment/

@@ -1,14 +1,6 @@
-ARG PYVERSION=3.6
-FROM python:${PYVERSION}-alpine
+FROM python:3.6-alpine
 
-RUN apk add --no-cache curl git
-ENV DOCKERVERSION=17.12.0-ce
-RUN curl -fsSLO https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKERVERSION}.tgz \
-  && mv docker-${DOCKERVERSION}.tgz docker.tgz \
-  && tar xzvf docker.tgz \
-  && mv docker/docker /usr/local/bin \
-  && rm -r docker docker.tgz
-
+RUN apk add --no-cache git
 ADD requirements.txt /tmp
 RUN pip install -r /tmp/requirements.txt pytest
 

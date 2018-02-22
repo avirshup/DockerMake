@@ -1,6 +1,2 @@
 FROM python:3.6-alpine
-RUN mkdir -p /opt/dist
-RUN apk add --no-cache docker \
- && pip install twine
-ADD deploy.sh /usr/local/bin
-RUN chmod +x /usr/local/bin/deploy.sh
+RUN pip install twine
