@@ -1,6 +1,6 @@
 # Docker-make
-[![Build Status](https://travis-ci.org/avirshup/DockerMake.svg?branch=master)](https://travis-ci.org/avirshup/DockerMake)
-[![PyPI version](https://badge.fury.io/py/DockerMake.svg)](https://badge.fury.io/py/DockerMake)
+[ ![Codeship Status for avirshup/DockerMake](https://app.codeship.com/projects/2e8e5e50-f965-0135-5b52-6ab6449f402e/status?branch=master)](https://app.codeship.com/projects/278529)
+[ ![PyPI version](https://badge.fury.io/py/DockerMake.svg)](https://badge.fury.io/py/DockerMake)
 
 ## Table of Contents
 + [What is it?](#what-is-it)
@@ -18,7 +18,7 @@
 + [Command line usage](#command-line-usage)
 
 ## What is it?
-A command line tool to build and manage stacks of docker images. You can mix and match different sets of build instructions as a dependency graph to easily create an easily maintainable and extensible stack of docker images.
+A command line tool to build and manage stacks of docker images. You can mix and match different sets of build instructions as a dependency graph to create maintainable and extensible stacks of docker images.
 
 
 ## Install it
@@ -50,6 +50,7 @@ docker-make final
 
 
 #### Build automation
+ * **new**: beta support for dockerfile build arguments
  * **new**: specify custom `.dockerignore` files for any given build step
  * Automated registry login and image pushes
  
@@ -264,13 +265,13 @@ Here's the dependency graph and generated Dockerfiles:
 
 ## Command line usage 
 ```
-usage: docker-make [-h] [-f MAKEFILE] [-a] [-l]
+usage: docker-make [-h] [-f MAKEFILE] [-a] [-l] [--build-arg BUILD_ARG]
                    [--requires [REQUIRES [REQUIRES ...]]] [--name NAME] [-p]
                    [-n] [--dockerfile-dir DOCKERFILE_DIR] [--pull]
                    [--cache-repo CACHE_REPO] [--cache-tag CACHE_TAG]
                    [--no-cache] [--bust-cache BUST_CACHE] [--clear-copy-cache]
-                   [--repository REPOSITORY] [--tag TAG] [--push-to-registry]
-                   [--registry-user REGISTRY_USER]
+                   [--keep-build-tags] [--repository REPOSITORY] [--tag TAG]
+                   [--push-to-registry] [--registry-user REGISTRY_USER]
                    [--registry-token REGISTRY_TOKEN] [--version] [--help-yaml]
                    [--debug]
                    [TARGETS [TARGETS ...]]
@@ -288,6 +289,10 @@ Choosing what to build:
   -a, --all             Print or build all images (or those specified by
                         _ALL_)
   -l, --list            List all available targets in the file, then exit.
+  --build-arg BUILD_ARG
+                        Set build-time variables (used the same way as docker
+                        build --build-arg), e.g., `... --build-arg VAR1=val1
+                        --build-arg VAR2=val2`
   --requires [REQUIRES [REQUIRES ...]]
                         Build a special image from these requirements.
                         Requires --name
@@ -322,6 +327,8 @@ Image caching:
                         multiple times.
   --clear-copy-cache, --clear-cache
                         Remove docker-make's cache of files for `copy-from`.
+  --keep-build-tags     Don't untag intermediate build containers when build
+                        is complete
 
 Repositories and tags:
   --repository REPOSITORY, -r REPOSITORY, -u REPOSITORY
@@ -350,10 +357,11 @@ Repositories and tags:
 
 Help:
   --version             Print version and exit.
-
+  --help-yaml           Print summary of YAML file format and exit.
+  --debug
 ```
 
 
-By Aaron Virshup, Autodesk Life Sciences
-
-Copyright (c) 2015-2017, Autodesk Inc. Released under the Apache 2.0 License.
+Copyright (c) 2015-2017, Autodesk Inc.
+Copyright (c) 2017-2018, Docker-Make contributors.
+Released under the Apache 2.0 License.
