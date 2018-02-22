@@ -17,11 +17,13 @@
 
 - name: deploy-dockerhub
   type: push
-  service: deploy-env
+  service: avirshup/docker-make
   tag: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)((a|rc|b)(0|[1-9]\d*))?$' # PEP440 version tags
   image_name: avirshup/docker-make
   image_tag: "{{.Branch}}"
   registry: https://index.docker.io/v1
+  encrypted_dockercfg_path: deployment/dockercfg.crypt
+
 
 
 - name: deploy-pypi

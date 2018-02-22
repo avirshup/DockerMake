@@ -51,5 +51,4 @@ services:
       context: deployment/
       dockerfile: Dockerfile.deploy
     encrypted_env_file: deployment/tokens.crypt
-    encrypted_dockercfg_path: deployment/dockercfg.crypt
 
