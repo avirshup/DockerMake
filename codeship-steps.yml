@@ -22,5 +22,5 @@
 
 - name: deploy-pypi
   service: deploy-env
-  command: twine upload -u ${PYPI_USER} -p ${PYPI_PASSWORD} /opt/distfiles/DockerMake-${CI_BRANCH}.tar.gz
+  command: sh -c "twine upload -u ${PYPI_USER} -p ${PYPI_PASSWORD} /opt/distfiles/DockerMake-${CI_BRANCH}.tar.gz"
   tag: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)((a|rc|b)(0|[1-9]\d*))?$' # PEP440 version tags
