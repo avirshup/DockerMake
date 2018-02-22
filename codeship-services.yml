@@ -1,49 +1,55 @@
-avirshup/docker-make:  # this is the deployment artifact
-  build:
-    dockerfile: Dockerfile
-    context: .
-  volumes:
-   - "./codeship-distfiles:/opt/distfiles"
+version: '2'
 
-testenv-python2.7:
-  add_docker: true
-  working_dir: /opt/test
-  volumes:
-   - "./codeship-distfiles:/opt/distfiles"
-  build:
-    context: .
-    dockerfile: deployment/Dockerfile.testenv
-    args:
-      PYVERSION: "2.7"
+yml-anchors:  # defines some yml anchors so that we DRY
+   sharedvol: &sharedvol
+     volumes:
+       - "./codeship-distfiles:/opt/distfiles"
 
-testenv-python3.5:
-  add_docker: true
-  working_dir: /opt/test
-  volumes:
-   - "./codeship-distfiles:/opt/distfiles"
-  build:
-    context: .
-    dockerfile: deployment/Dockerfile.testenv
-    args:
-      PYVERSION: "3.5"
+   testenv: &testenv
+      add_docker: true
+      working_dir: /opt/test
+      volumes:
+       - "./codeship-distfiles:/opt/distfiles"
 
-testenv-python3.6:
-  add_docker: true
-  working_dir: /opt/test
-  volumes:
-   - "./codeship-distfiles:/opt/distfiles"
-  build:
-    context: .
-    dockerfile: deployment/Dockerfile.testenv
-    args:
-      PYVERSION: "3.6"
+   testbuild: &testbuild
+      context: .
+      dockerfile: deployment/Dockerfile.testenv
 
-deploy-env:
-  add_docker: true
-  build:
-    context: deployment/
-    dockerfile: Dockerfile.deploy
-  encrypted_env_file: deployment/tokens.crypt
-  encrypted_dockercfg_path: deployment/dockercfg.crypt
-  volumes:
-    - "./codeship-distfiles:/opt/distfiles"
+
+services:
+  avirshup/docker-make:  # this is the deployment artifact
+    <<: *sharedvol
+    build:
+      dockerfile: Dockerfile
+      context: .
+
+  testenv-python2.7:
+    <<: *testenv
+    build:
+      <<: *testbuild
+      args:
+        PYVERSION: "2.7"
+
+  testenv-python3.5:
+    <<: *testenv
+    build:
+      <<: *testbuild
+      args:
+        PYVERSION: "3.5"
+
+  testenv-python3.6:
+    <<: *testenv
+    build:
+      <<: *testbuild
+      args:
+        PYVERSION: "3.6"
+
+  deploy-env:
+    <<: *sharedvol
+    add_docker: true
+    build:
+      context: deployment/
+      dockerfile: Dockerfile.deploy
+    encrypted_env_file: deployment/tokens.crypt
+    encrypted_dockercfg_path: deployment/dockercfg.crypt
+
