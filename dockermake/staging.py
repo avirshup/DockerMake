@@ -90,7 +90,7 @@ class StagedFile(object):
             # write files to disk (would be nice to stream them, haven't gotten it to work)
             tempdir = tempfile.mkdtemp(dir=BUILD_TEMPDIR)
             with open(os.path.join(tempdir, 'content.tar'), 'wb') as localfile:
-                for chunk in tarfile_stream.stream():
+                for chunk in tarfile_stream:
                     localfile.write(chunk)
             os.mkdir(cachedir)
             os.rename(tempdir, cachedir)
