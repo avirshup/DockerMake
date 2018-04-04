@@ -20,7 +20,7 @@ setup(
                   ]
         },
         install_requires=['termcolor',
-                          'docker',
+                          'docker>=3.2',
                           'future',
                           'pyyaml'],
 )

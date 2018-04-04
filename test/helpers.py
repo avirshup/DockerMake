@@ -33,7 +33,10 @@ def creates_images(*imgnames):
         yield
 
         for name in imgnames:  # force it to also remove the containers
-            client.images.remove(name, force=True)
+            try:
+                client.images.remove(name, force=True)
+            except docker.errors.ImageNotFound:
+                pass
     return fixture
 
 
@@ -51,10 +54,11 @@ def assert_file_content(imgname, path, content):
 
     try:
         tarstream, stat = container.get_archive(path)
+        actual_content = b''.join(tarstream)
     except docker.errors.NotFound:
         assert False, 'File %s not found' % path
     container.remove()
 
-    tf = tarfile.open(fileobj=io.BytesIO(tarstream.read()))
+    tf = tarfile.open(fileobj=io.BytesIO(actual_content))
     val = tf.extractfile(os.path.basename(path)).read().decode('utf-8')
     assert val.strip() == content

@@ -1,4 +1,4 @@
 termcolor
-docker >=3.0
+docker >=3.2
 future
 pyyaml
