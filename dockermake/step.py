@@ -122,11 +122,14 @@ class BuildStep(object):
             if not self.custom_exclude:
                 kwargs.update(path=context_path)
             else:
-                print(colored('  Custom .dockerignore from:','blue'),
+                print(colored('  Custom .dockerignore from:', 'blue'),
                       colored(os.path.relpath(self.ignoredefs_file),  'blue', attrs=['bold']))
+
+                # AMV - this is a brittle internal call to the library
                 context = docker.utils.tar(self.build_dir,
                                            exclude=self.custom_exclude,
-                                           dockerfile=os.path.join(DOCKER_TMPDIR, 'Dockerfile'),
+                                           dockerfile=(os.path.join(DOCKER_TMPDIR, 'Dockerfile'),
+                                                       dockerfile),
                                            gzip=False)
                 kwargs.update(fileobj=context,
                                   custom_context=True)
