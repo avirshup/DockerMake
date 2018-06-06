@@ -27,7 +27,7 @@ DOCKER_TMPDIR = '_docker_make_tmp/'
 
 
 class BuildStep(object):
-    """ Stores and runs the instructions to build a single image.
+    """ Stores and runs the instructions to build a single step.
 
     Args:
         imagename (str): name of this image definition
@@ -37,11 +37,12 @@ class BuildStep(object):
         bust_cache(bool): never use docker cache for this build step
         cache_from (str or list): use this(these) image(s) to resolve build cache
         buildargs (dict): build-time "buildargs" for dockerfiles
+        squash (bool): whether the result should be squashed
     """
 
     def __init__(self, imagename, baseimage, img_def, buildname,
                  build_first=None, bust_cache=False, cache_from=None,
-                 buildargs=None):
+                 buildargs=None, squash=False):
         self.imagename = imagename
         self.baseimage = baseimage
         self.img_def = img_def
@@ -53,6 +54,7 @@ class BuildStep(object):
         self.custom_exclude = self._get_ignorefile(img_def)
         self.ignoredefs_file = img_def.get('ignorefile', img_def['_sourcefile'])
         self.buildargs = buildargs
+        self.squash = squash
         if cache_from and isinstance(cache_from, str):
             self.cache_from = [cache_from]
         else:
@@ -106,7 +108,8 @@ class BuildStep(object):
                       pull=pull,
                       nocache=not usecache,
                       decode=True, rm=True,
-                      buildargs=self.buildargs)
+                      buildargs=self.buildargs,
+                      squash=self.squash)
 
         if usecache:
             utils.set_build_cachefrom(self.cache_from, kwargs, client)
@@ -125,7 +128,7 @@ class BuildStep(object):
                 print(colored('  Custom .dockerignore from:', 'blue'),
                       colored(os.path.relpath(self.ignoredefs_file),  'blue', attrs=['bold']))
 
-                # AMV - this is a brittle internal call to the library
+                # AMV - this is a brittle call to an apparently "private' docker sdk method
                 context = docker.utils.tar(self.build_dir,
                                            exclude=self.custom_exclude,
                                            dockerfile=(os.path.join(DOCKER_TMPDIR, 'Dockerfile'),
@@ -136,13 +139,13 @@ class BuildStep(object):
 
         else:
             if sys.version_info.major == 2:
-                kwargs.update(fileobj=StringIO(dockerfile),
-                                  path=None,
-                                  dockerfile=None)
+                fileobj = StringIO(dockerfile)
             else:
-                kwargs.update(fileobj=BytesIO(dockerfile.encode('utf-8')),
-                                  path=None,
-                                  dockerfile=None)
+                fileobj = BytesIO(dockerfile.encode('utf-8'))
+
+            kwargs.update(fileobj=fileobj,
+                          path=None,
+                          dockerfile=None)
 
             tempdir = None
 

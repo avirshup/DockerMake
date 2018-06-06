@@ -29,7 +29,7 @@ from . import errors
 from . import utils
 
 RECOGNIZED_KEYS = set(('requires build_directory build copy_from FROM description _sourcefile'
-                       ' FROM_DOCKERFILE ignore ignorefile')
+                       ' FROM_DOCKERFILE ignore ignorefile squash')
                       .split())
 SPECIAL_FIELDS = set('_ALL_ _SOURCES_'.split())
 
@@ -160,12 +160,17 @@ class ImageDefs(object):
         for base_name in self.sort_dependencies(image):
             istep += 1
             buildname = 'dmkbuild_%s_%d' % (image, istep)
+            squash = self.ymldefs[base_name].get('squash', False)
             build_steps.append(
                     dockermake.step.BuildStep(
-                            base_name, base_image, self.ymldefs[base_name],
-                            buildname, bust_cache=base_name in rebuilds,
+                            base_name,
+                            base_image,
+                            self.ymldefs[base_name],
+                            buildname,
+                            bust_cache=base_name in rebuilds,
                             build_first=build_first, cache_from=cache_from,
-                            buildargs=buildargs))
+                            buildargs=buildargs,
+                            squash=squash))
 
             base_image = buildname
             build_first = None

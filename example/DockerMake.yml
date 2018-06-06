@@ -1,7 +1,11 @@
 base_image:
+ description: >
+  A basic definition for other images to build on. Specifically, it refers to a dockerfile that needs
+  to be built to provide the "FROM" field for all other images
  FROM_DOCKERFILE: ./Dockerfile.base_image
 
 devbase:
+ description: Step to ensure /opt directory and wget exist
  requires:
    - base_image
  build: |
@@ -9,12 +13,14 @@ devbase:
   RUN mkdir -p /opt
 
 data_image:
+ description: Step to ensure /data directory exists
  requires:
   - base_image
  build: |
-  RUN mkdir /data
+  RUN mkdir -p /data
 
 airline_data:
+ description: Step that add some csv data to the data directory
  requires:
   - data_image
  build_directory: sample_data/airline_data
@@ -22,15 +28,24 @@ airline_data:
   ADD AirPassengers.csv /data
 
 plant_data:
+ description: >
+  Step that add a temporary file to the image, then use it to create a csv file in the /data directory
+
+  This is an example of squashing an image to remove a temporary file. Here, the
+  "Puromycin.csv" file gets added to /tmp with an ADD command but is then removed in a later layer.
+  By setting "squash: true", we remove intermediate layers and any files that exist only in them.
  requires:
  - data_image
  build_directory: sample_data/plant_growth
+ squash: true
  build: |
-  ADD Puromycin.csv /data
+  ADD Puromycin.csv /tmp
+  RUN cp /tmp/Puromycin.csv /data/inhibitor.csv
+  RUN rm /tmp/Puromycin.csv
 
 blank_file_build:
   description: |
-    This image isn't intended for deployment! Rather, files built in this environment
+    Images built with these steps aren't intended for deployment! Rather, files built in this environment
     can be copied into other images (see data_science.copy_from below)
   FROM: busybox
   build: |
@@ -38,6 +53,7 @@ blank_file_build:
     RUN dd if=/dev/zero of=/data/file.txt count=1024 bs=1024
 
 python_image:
+ description: Steps to install python and a py library
  requires:
   - devbase
  build: |
@@ -45,6 +61,7 @@ python_image:
   RUN pip install Pint
 
 data_science:
+ description: Combines several steps into one a single image definition
  requires:
   - python_image
   - airline_data
@@ -54,6 +71,7 @@ data_science:
      /data/file.txt: /data
 
 final:
+ description: Adds an environment variable to the container
  requires:
    - data_science
  build: |
