@@ -6,7 +6,8 @@ import docker.errors
 
 __client = None
 
-def _get_client():
+
+def get_client():
     """
     Returns:
         docker.APIClient
@@ -23,7 +24,7 @@ def creates_images(*imgnames):
     """
     @pytest.fixture
     def fixture():
-        client = _get_client()
+        client = get_client()
         for name in imgnames:
             try:
                 client.images.remove(name, force=True)
@@ -40,11 +41,28 @@ def creates_images(*imgnames):
     return fixture
 
 
-def assert_file_content(imgname, path, content):
+def assert_file_content(imgname, path, expected_content):
     """ Asserts that an image exists with a file at the
     specified path containing the specified content
     """
-    client = _get_client()
+    try:
+        actual_content = get_file_content(imgname, path)
+    except docker.errors.NotFound:
+        assert False, ('File %s not found' % path)
+    assert actual_content.strip() == expected_content.strip()
+
+
+def file_exists(imgname, path):
+    try:
+        get_file_content(imgname, path)
+    except docker.errors.NotFound:
+        return False
+    else:
+        return True
+
+
+def get_file_content(imgname, path):
+    client = get_client()
     try:
         image = client.images.get(imgname)
     except (docker.errors.ImageNotFound, docker.errors.APIError) as exc:
@@ -52,13 +70,10 @@ def assert_file_content(imgname, path, content):
 
     container = client.containers.create(image)
 
-    try:
-        tarstream, stat = container.get_archive(path)
-        actual_content = b''.join(tarstream)
-    except docker.errors.NotFound:
-        assert False, 'File %s not found' % path
+    tarstream, stat = container.get_archive(path)
+    content = b''.join(tarstream)
     container.remove()
 
-    tf = tarfile.open(fileobj=io.BytesIO(actual_content))
+    tf = tarfile.open(fileobj=io.BytesIO(content))
     val = tf.extractfile(os.path.basename(path)).read().decode('utf-8')
-    assert val.strip() == content
+    return val

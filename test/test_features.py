@@ -1,8 +1,10 @@
 import os
+
+import docker.errors
 import pytest
 from dockermake.__main__ import _runargs as run_docker_make
 
-from .helpers import assert_file_content, creates_images
+from . import helpers
 
 
 # note: these tests MUST be run with CWD REPO_ROOT/tests
@@ -12,17 +14,17 @@ def docker_client():
     return docker.from_env()
 
 
-img1 = creates_images(*'target2_bases target3_bases'.split())
+img1 = helpers.creates_images(*'target2_bases target3_bases'.split())
 def test_multiple_bases(img1):
     run_docker_make('-f data/multibase.yml target2_bases target3_bases')
-    assert_file_content('target2_bases', '/opt/success', 'success2')
-    assert_file_content('target3_bases', '/opt/success', 'success3')
+    helpers.assert_file_content('target2_bases', '/opt/success', 'success2')
+    helpers.assert_file_content('target3_bases', '/opt/success', 'success3')
 
 
-img2 = creates_images('target_include')
+img2 = helpers.creates_images('target_include')
 def test_paths_relative_interpreted_relative_to_definition_file(img2):
     run_docker_make('-f data/include.yml target_include')
-    assert_file_content('target_include', '/opt/testfile.txt',
+    helpers.assert_file_content('target_include', '/opt/testfile.txt',
                         'this is a file used in tests for relative path resolution')
 
 
@@ -32,25 +34,25 @@ _FILES = {'a': {'content': 'a', 'path': '/opt/a'},
           'd': {'content': 'd', 'path': '/opt/d/d'}}
 
 
-img3 = creates_images('target_ignore_string')
+img3 = helpers.creates_images('target_ignore_string')
 def test_ignore_string(img3):
     run_docker_make('-f data/ignores.yml target_ignore_string')
     _check_files('target_ignore_string', b=False)
 
 
-img4 = creates_images('target_ignorefile')
+img4 = helpers.creates_images('target_ignorefile')
 def test_ignorefile(img4):
     run_docker_make('-f data/ignores.yml target_ignorefile')
     _check_files('target_ignorefile', c=False)
 
 
-img5 = creates_images('target_regular_ignore')
+img5 = helpers.creates_images('target_regular_ignore')
 def test_regular_ignore(img5):
     run_docker_make('-f data/ignores.yml target_regular_ignore')
     _check_files('target_regular_ignore', a=False, b=False)
 
 
-img6 = creates_images('target_ignore_directory')
+img6 = helpers.creates_images('target_ignore_directory')
 def test_ignore_directory(img6):
     run_docker_make('-f data/ignores.yml target_ignore_directory')
     _check_files('target_ignore_directory', d=False)
@@ -62,7 +64,7 @@ def test_dockerfile_write(tmpdir):
     assert os.path.isfile(os.path.join(tmpdir, 'Dockerfile.writetarget'))
 
 
-img7 = creates_images('simple-target')
+img7 = helpers.creates_images('simple-target')
 @pytest.fixture(scope='function')
 def twin_simple_targets(img7, docker_client):
     run_docker_make('-f data/simple.yml simple-target')
@@ -76,7 +78,7 @@ def test_no_cache(twin_simple_targets):
     image1, image2 = twin_simple_targets
     assert image1.id != image2.id
 
-clean8 = creates_images('img1repo/simple-target:img1tag',
+clean8 = helpers.creates_images('img1repo/simple-target:img1tag',
                         'img2repo/simple-target:img2tag')
 def test_explicit_cache_from(twin_simple_targets, docker_client, clean8):
     image1, image2 = twin_simple_targets
@@ -98,16 +100,41 @@ def test_cache_fallback(twin_simple_targets, docker_client):
     assert final_image.id == image2.id
 
 
+squashimgs = helpers.creates_images('visible-secret', 'invisible-secret')
+def test_squashed_secrets(squashimgs):
+    run_docker_make('-f data/secret-squash.yml invisible-secret visible-secret')
+    client = helpers.get_client()
+
+    # For both of these images, /opt/a should be present in a base layer, while /root/c should not
+    for imgname in ('visible-secret', 'invisible-secret'):
+
+        # Sanity check - neither "secret" file should be present in the top layer
+        assert not helpers.file_exists(imgname, '/root/c')
+        assert not helpers.file_exists(imgname, '/opt/a')
+
+        img = client.images.get(imgname)
+        layers = img.attrs['RootFS']['Layers']
+        found_opt_a, found_root_c = False, False
+        for layerid in layers:
+            if layerid.lower() == '<missing>':
+                continue
+            found_opt_a = found_opt_a or helpers.file_exists(layerid, '/opt/a')
+            found_root_c = found_root_c or helpers.file_exists(layerid, '/root/c')
+
+        assert found_opt_a, "/opt/a not present in any layers of %s" % imgname
+        assert not found_root_c, "/root/c was found in a layer of %s" % imgname
+
+
 def _check_files(img, **present):
     for f, record in _FILES.items():
         if not present.get(f, True):
             with pytest.raises(AssertionError):
-                assert_file_content(img, record['path'], record['content'])
+                helpers.assert_file_content(img, record['path'], record['content'])
         else:
-            assert_file_content(img, record['path'], record['content'])
+            helpers.assert_file_content(img, record['path'], record['content'])
 
 
-twostep = creates_images('target-twostep',
+twostep = helpers.creates_images('target-twostep',
                          'dmkbuild_target-twostep_2',
                          'dmkbuild_target-twostep_1')
 def test_keep_build_tags(twostep, docker_client):
@@ -116,7 +143,7 @@ def test_keep_build_tags(twostep, docker_client):
     docker_client.images.get('dmkbuild_target-twostep_2')
 
 
-buildargs = creates_images('target-buildargs')
+buildargs = helpers.creates_images('target-buildargs')
 def test_build_args(buildargs):
     run_docker_make('-f data/build-args.yml --build-arg FILENAME=hello-world.txt target-buildargs')
-    assert_file_content('target-buildargs', 'hello-world.txt', 'hello world')
+    helpers.assert_file_content('target-buildargs', 'hello-world.txt', 'hello world')

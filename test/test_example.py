@@ -81,7 +81,7 @@ def test_example_build():
         cwd=EXAMPLEDIR)
 
     subprocess.check_call(
-        "docker run myrepo/final:mytag ls data/AirPassengers.csv data/Puromycin.csv data/file.txt".split(),
+        "docker run myrepo/final:mytag ls data/AirPassengers.csv data/inhibitor.csv data/file.txt".split(),
         cwd=EXAMPLEDIR)
 
 

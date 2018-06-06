@@ -156,6 +156,9 @@ class BuildStep(object):
         except (ValueError, docker.errors.APIError) as e:
             raise errors.BuildError(dockerfile, str(e), kwargs)
 
+        if self.squash:
+            print(colored('  Squashed this step to a single layer', 'yellow'))
+
         # remove the temporary dockerfile
         if tempdir is not None:
             os.unlink(os.path.join(tempdir, 'Dockerfile'))
