@@ -78,8 +78,9 @@ def test_no_cache(twin_simple_targets):
     image1, image2 = twin_simple_targets
     assert image1.id != image2.id
 
+
 clean8 = helpers.creates_images('img1repo/simple-target:img1tag',
-                        'img2repo/simple-target:img2tag')
+                                'img2repo/simple-target:img2tag')
 def test_explicit_cache_from(twin_simple_targets, docker_client, clean8):
     image1, image2 = twin_simple_targets
     image1.tag('img1repo/simple-target', tag='img1tag')
@@ -123,6 +124,37 @@ def test_squashed_secrets(squashimgs):
 
         assert found_opt_a, "/opt/a not present in any layers of %s" % imgname
         assert not found_root_c, "/root/c was found in a layer of %s" % imgname
+
+
+squashcache = helpers.creates_images('cache-test')
+def test_cache_used_after_squash(squashcache):
+    run_docker_make('-f data/secret-squash.yml cache-test')
+    client = helpers.get_client()
+    firstimg = client.images.get('cache-test')
+    run_docker_make('-f data/secret-squash.yml cache-test')
+    assert client.images.get('cache-test').id == firstimg.id
+
+
+squashcache = helpers.creates_images('cache-test')
+def test_handle_missing_squash_cache(squashcache):
+    run_docker_make('-f data/secret-squash.yml cache-test invisible-secret')
+    client = helpers.get_client()
+    cachelayer = client.images.get('invisible-secret')
+    firstimg = client.images.get('cache-test')
+    for _id in ('cache-test',
+                firstimg.id,
+                'invisible_secret',
+                cachelayer.id):
+        try:
+            client.images.remove(_id)
+        except docker.errors.ImageNotFound:
+            pass
+
+    # Make sure the image can rebuild even if original layers are missing
+    run_docker_make('-f data/secret-squash.yml cache-test')
+
+    # Sanity check - makes sure that the first image was in fact removed and not used for cache
+    assert client.images.get('cache-test').id != firstimg.id
 
 
 def _check_files(img, **present):

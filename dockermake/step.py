@@ -156,7 +156,7 @@ class BuildStep(object):
         except (ValueError, docker.errors.APIError) as e:
             raise errors.BuildError(dockerfile, str(e), kwargs)
 
-        if self.squash:
+        if self.squash and not self.bust_cache:
             self._resolve_squash_cache(client)
 
         # remove the temporary dockerfile
@@ -177,18 +177,19 @@ class BuildStep(object):
                   a cached one, substitute the unsuqashed image for the squashed one.
                   If no match, re-run the steps with squash=True and store the resulting pair
                   Less brittle than 1., but harder and defs not elegant
-           3. Use docker-squash as a dependency - this is by far the most preferable solution, except
-              that they don't yet support the newest docker sdk version.
+           3. Use docker-squash as a dependency - this is by far the most preferable solution,
+              except that they don't yet support the newest docker sdk version.
 
-        So for now we go with option 1
+        Currently option 1 is implemented - we parse the comment string in the image history
+        to figure out which layers the image was squashed from
         """
         from .staging import BUILD_CACHEDIR
 
         history = client.api.history(self.buildname)
         comment = history[0].get('Comment', '').split()
         if len(comment) != 4 or comment[0] != 'merge' or comment[2] != 'to':
-            print('WARNING: failed to parse this image\'s pre-squash history. The build will continue, '
-                  'but all subsequent layers will be rebuilt.')
+            print('WARNING: failed to parse this image\'s pre-squash history. '
+                  'The build will continue, but all subsequent layers will be rebuilt.')
             return
 
         squashed_sha = history[0]['Id']
@@ -199,9 +200,12 @@ class BuildStep(object):
         # check cache
         squashcache = os.path.join(BUILD_CACHEDIR, 'squashes')
         if not os.path.exists(squashcache):
-            os.mkdir(squashcache)
-        cachepath = os.path.join(BUILD_CACHEDIR, 'squashes', '%s-%s' % (start_squash_sha, end_squash_sha))
-        if os.path.exists(cachepath):  # on hit, tag the squashedsha as the result of this build step
+            os.makedirs(squashcache)
+        cachepath = os.path.join(BUILD_CACHEDIR,
+                                 'squashes', '%s-%s' % (start_squash_sha, end_squash_sha))
+
+        # on hit, tag the squashedsha as the result of this build step
+        if os.path.exists(cachepath):
             self._get_squashed_layer_cache(client, squashed_sha, cachepath)
         else:
             self._cache_squashed_layer(squashed_sha, cachepath)
@@ -210,7 +214,10 @@ class BuildStep(object):
         import uuid
         from .staging import BUILD_TEMPDIR
         # store association to the cache. A bit convoluted so that we can use the atomic os.rename
+
         cprint('  Using newly built layer %s' % squashed_sha, 'yellow')
+        if not os.path.exists(BUILD_TEMPDIR):
+            os.makedirs(BUILD_TEMPDIR)
         writepath = os.path.join(BUILD_TEMPDIR, str(uuid.uuid4()))
         with open(writepath, 'w') as shafile:
             shafile.write(squashed_sha)
@@ -221,10 +228,10 @@ class BuildStep(object):
             cached_squashed_sha = cachefile.read().strip()
 
         try:
-            client.api.get(cached_squashed_sha)
+            client.images.get(cached_squashed_sha)
         except docker.errors.ImageNotFound:
             cprint('  INFO: Old cache image %s no longer exists' % cached_squashed_sha, 'yellow')
-            return self._storecache(squashed_sha, cachepath)
+            return self._cache_squashed_layer(squashed_sha, cachepath)
         else:
             cprint('  Using squashed result from cache %s' % cached_squashed_sha, 'yellow')
             client.api.tag(cached_squashed_sha, self.buildname, force=True)

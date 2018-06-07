@@ -10,7 +10,7 @@ __client = None
 def get_client():
     """
     Returns:
-        docker.APIClient
+        docker.DockerClient
     """
     global __client
     if __client is None:
