@@ -1,10 +1,17 @@
 import os
 import io
 import tarfile
+import sys
+
 import pytest
 import docker.errors
 
+
 __client = None
+if sys.version_info.major == 2:
+    file_not_found_error = IOError
+else:
+    file_not_found_error = FileNotFoundError
 
 
 def get_client():
@@ -100,7 +107,7 @@ def get_file_content(imgname, path):
 def find_files_in_layers(img, files, tmpdir=None):
     """ Scans an image's layers looking for specific files.
 
-    This is hard and a little brittle because we're NOT just looking at images, we're looking at
+    There's no API for this, so it's brittle. We're looking at
     every layer stored internally for a given image. The solution here just uses `docker save`
     to dump the layers to disk and examine them. This was written to parse the format of the
     tarfile from docker 18.03.1; I'm not sure how stable this is, either backwards or forwards.
@@ -131,7 +138,7 @@ def find_files_in_layers(img, files, tmpdir=None):
 
     with tarfile.open(tarpath, 'r') as tf:
         mf_obj = tf.extractfile('manifest.json')
-        manifest = json.load(mf_obj)
+        manifest = json.loads(mf_obj.read().decode('utf-8'))
         assert len(manifest) == 1
         for path_to_layer_tar in manifest[0]['Layers']:
             layer_tar_buffer = tf.extractfile(path_to_layer_tar)
@@ -158,7 +165,7 @@ def _scan_tar(tarobj, files):
     for f in files:
         try:
             tf = tarobj.extractfile(f.lstrip('/'))
-        except (KeyError, FileNotFoundError):
+        except (KeyError, file_not_found_error):
             continue
 
         if tf is not None:
