@@ -37,6 +37,15 @@ _FILES = {'a': {'content': 'a', 'path': '/opt/a'},
           'd': {'content': 'd', 'path': '/opt/d/d'}}
 
 
+def _check_files(img, **present):
+    for f, record in _FILES.items():
+        if not present.get(f, True):
+            with pytest.raises(AssertionError):
+                helpers.assert_file_content(img, record['path'], record['content'])
+        else:
+            helpers.assert_file_content(img, record['path'], record['content'])
+
+
 img3 = helpers.creates_images('target_ignore_string')
 def test_ignore_string(img3):
     run_docker_make('-f data/ignores.yml target_ignore_string')
@@ -171,19 +180,11 @@ def test_build_fails_if_secrets_already_exist(experimental_daemon, secretfail):
     with pytest.raises(dockermake.errors.BuildError):
         run_docker_make('-f data/secret-squash.yml secretfail')
 
+
 copy_with_secrets = helpers.creates_images('copy_with_secrets')
 def test_error_if_copy_with_secrets(copy_with_secrets):
     with pytest.raises(dockermake.errors.ParsingFailure):
         run_docker_make('-f data/copy_with_secrets.yml copy_with_secrets')
-
-
-def _check_files(img, **present):
-    for f, record in _FILES.items():
-        if not present.get(f, True):
-            with pytest.raises(AssertionError):
-                helpers.assert_file_content(img, record['path'], record['content'])
-        else:
-            helpers.assert_file_content(img, record['path'], record['content'])
 
 
 twostep = helpers.creates_images('target-twostep',
@@ -193,6 +194,23 @@ def test_keep_build_tags(twostep, docker_client):
     run_docker_make('-f data/twostep.yml target-twostep --keep-build-tags')
     docker_client.images.get('dmkbuild_target-twostep_1')
     docker_client.images.get('dmkbuild_target-twostep_2')
+
+
+alltest = helpers.creates_images('t1', 't2', 't3', 't4')
+def test_implicit_all(alltest):
+    run_docker_make('-f data/implicit_all.yml --all')
+    for s in 't1 t2 t3 t4'.split():
+        helpers.assert_file_content(s, '/opt/%s' % s, s)
+
+
+def test_explicit_all(alltest):
+    run_docker_make('-f data/explicit_all.yml --all')
+    for s in 't1 t3'.split():
+        helpers.assert_file_content(s, '/opt/%s' % s, s)
+    client = helpers.get_client()
+    for s in 't2 t4'.split():
+        with pytest.raises(docker.errors.ImageNotFound):
+            client.images.get(s)
 
 
 buildargs = helpers.creates_images('target-buildargs')
