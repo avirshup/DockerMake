@@ -2,9 +2,12 @@ import os
 
 import docker.errors
 import pytest
+
 from dockermake.__main__ import _runargs as run_docker_make
+import dockermake.errors
 
 from . import helpers
+from .helpers import experimental_daemon, non_experimental_daemon
 
 
 # note: these tests MUST be run with CWD REPO_ROOT/tests
@@ -102,7 +105,7 @@ def test_cache_fallback(twin_simple_targets, docker_client):
 
 
 squashimgs = helpers.creates_images('visible-secret', 'invisible-secret')
-def test_squashed_secrets(squashimgs):
+def test_squashed_secrets(experimental_daemon, squashimgs):
     run_docker_make('-f data/secret-squash.yml invisible-secret visible-secret')
     files_to_find = ['/opt/a', '/root/c', '/root/copy-c']
 
@@ -117,8 +120,13 @@ def test_squashed_secrets(squashimgs):
     assert invisfiles['/root/copy-c']
 
 
+def test_squashing_error_without_experimental_daemon(non_experimental_daemon):
+    with pytest.raises(dockermake.errors.ExperimentalDaemonRequiredError):
+        run_docker_make('-f data/secret-squash.yml invisible-secret visible-secret')
+
+
 squashcache = helpers.creates_images('cache-test')
-def test_cache_used_after_squash(squashcache):
+def test_cache_used_after_squash(experimental_daemon, squashcache):
     run_docker_make('-f data/secret-squash.yml cache-test')
     client = helpers.get_client()
     firstimg = client.images.get('cache-test')
@@ -127,7 +135,7 @@ def test_cache_used_after_squash(squashcache):
 
 
 squashcache = helpers.creates_images('cache-test')
-def test_handle_missing_squash_cache(squashcache):
+def test_handle_missing_squash_cache(experimental_daemon, squashcache):
     run_docker_make('-f data/secret-squash.yml cache-test invisible-secret')
     client = helpers.get_client()
     cachelayer = client.images.get('invisible-secret')

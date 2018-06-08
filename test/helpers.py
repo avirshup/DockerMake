@@ -41,6 +41,24 @@ def creates_images(*imgnames):
     return fixture
 
 
+@pytest.fixture
+def experimental_daemon():
+    _skip_if_daemon_experimental_mode_is(False)
+
+
+@pytest.fixture
+def non_experimental_daemon():
+    _skip_if_daemon_experimental_mode_is(True)
+
+
+def _skip_if_daemon_experimental_mode_is(skip_if_on):
+    client = get_client()
+    version = client.version()
+    if version.get('Experimental', False) == skip_if_on:
+        pytest.skip("This test requires a docker daemon with experimental mode *%s*" %
+                    ("disabled" if skip_if_on else "enabled"))
+
+
 def assert_file_content(imgname, path, expected_content):
     """ Asserts that an image exists with a file at the
     specified path containing the specified content

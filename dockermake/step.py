@@ -153,7 +153,17 @@ class BuildStep(object):
         stream = client.api.build(**kwargs)
         try:
             utils.stream_docker_logs(stream, self.buildname)
-        except (ValueError, docker.errors.APIError) as e:
+        except docker.errors.APIError as e:
+            if self.squash and not client.version().get('Experimental', False):
+                raise errors.ExperimentalDaemonRequiredError(
+                        'Docker error message:\n   ' + str(e) +
+                        '\n\nUsing `squash` and/or `secret-files` requires a docker'
+                        " daemon with experimental features enabled. See\n"
+                        "    https://github.com/docker/docker-ce/blob/master/components/cli/"
+                        "experimental/README.md")
+            else:
+                raise errors.BuildError(dockerfile, str(e), kwargs)
+        except ValueError as e:
             raise errors.BuildError(dockerfile, str(e), kwargs)
 
         if self.squash and not self.bust_cache:

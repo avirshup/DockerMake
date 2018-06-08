@@ -79,6 +79,10 @@ class CLIError(UserException):
     CODE = 52
 
 
+class ExperimentalDaemonRequiredError(UserException):
+    CODE = 53
+
+
 class BuildError(Exception):
     CODE = 200
 
