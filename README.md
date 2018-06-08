@@ -57,7 +57,7 @@ docker-make final
  
 #### Secrets and squashing
  - [squash](#squash) arbitrary parts of your build (using `squash: true` in a step definition) without busting the cache
- - Designate [`secret-files`](#secret-files) to erase them from intermediate layers (In the step definition, use `secret-files: ['path1', 'path2', ...]`)
+ - Designate [`secret_files`](#secret_files) to erase them from intermediate layers (In the step definition, use `secret_files: ['path1', 'path2', ...]`)
  
 **WARNING:** these features are in alpha - use with extreme caution
  
@@ -113,7 +113,7 @@ Image definitions can include any of the following fields:
 * [**`description`**](#description)
 * [**`copy_from`**](#copy_from)
 * [**`squash`**](#squash)
-* [**`secret-files`**](#secret-files)
+* [**`secret_files`**](#secret_files)
 
 #### **`FROM`/`FROM_DOCKERFILE`**
 The docker image to use as a base for this image (and those that require it). This can be either the name of an image (using `FROM`) or the path to a local Dockerfile (using `FROM_DOCKERFILE`).
@@ -260,18 +260,19 @@ count-a-big-file   ...   4.15MB
 ```
 
 
-#### **`secret-files`**
+#### **`secret_files`**
 **Read these caveats first**
 
- - This is an alpha-stage feature. DO NOT rely on it as a security tool. You must carefully verify that your final image, and all its layers AND its history, are free of sensitive information before deploying them.
+ - This is an alpha-stage feature. DO NOT rely on it as a security tool. You must carefully verify that your final image, and all its layers AND its history, are free of sensitive information before deploying or publishing them.
  - It relies on [experimental docker daemon features](https://github.com/docker/docker-ce/blob/master/components/cli/experimental/README.md).
- - Although your final image won't contain your secrets, they will be present in intermediate images on your build machine. Your secrets will be exposed with all `docker` users on your build machine.
+ - Although your final image won't contain your secrets, they will be present in intermediate images on your build machine. Your secrets will be exposed to all `docker` users on your build machine.
+ - When you define `secret_files` for a step, it only erases files that are added in the `build` definition _for that step_. Files added in other steps will remain exposed in your image's layers. 
 
 **Background**
 
-It's often necessary to perform some form of authentication during a build - for instance, you might need to clone a private git repository or download dependencies from a private server. To perform these tasks in a container at build-time, you'll need to provide credentials during the build process. However, it's quite challenging to do so without leaving those credentials inside a layer of the final docker image or its history.
+It's often necessary to perform some form of authentication during a build - for instance, you might need to clone a private git repository or download dependencies from a private server. However, it's quite challenging to do so without leaving your credentials inside a layer of the final docker image or its history.
 
-Files added or created in a given step can be designated as `secret-files` in DockerMake.yml. These files will be automatically erased at the end of the step, and the step's layers will be squashed to keep the files out of the history.
+Files added or created in a given step can be designated as `secret_files` in DockerMake.yml. These files will be automatically erased at the end of the step, and the step's layers will be squashed to keep the files out of the history.
  
  **Example**
 ```yml
@@ -280,7 +281,7 @@ my-secret-steps:
     build: |
         ADD my-credentials /opt/credentials
         RUN some-process --credentials /opt/credentials
-    secret-files:
+    secret_files:
         - /opt/credentials
 ```
 

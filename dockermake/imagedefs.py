@@ -29,7 +29,7 @@ from . import errors
 from . import utils
 
 RECOGNIZED_KEYS = set(('requires build_directory build copy_from FROM description _sourcefile'
-                       ' FROM_DOCKERFILE ignore ignorefile squash')
+                       ' FROM_DOCKERFILE ignore ignorefile squash secret_files')
                       .split())
 SPECIAL_FIELDS = set('_ALL_ _SOURCES_'.split())
 
@@ -115,6 +115,10 @@ class ImageDefs(object):
                         'Image "%s" has both "ignore" AND "ignorefile" fields.' % imagename +
                         ' At most ONE of these should be defined')
 
+            if 'secret_files' in defn and not defn.get('squash', True):
+                raise errors.ParsingFailure(
+                        "Step '%s' defines secret_files, so 'squash' cannot be set to 'false'")
+
             for key in defn:
                 if key not in RECOGNIZED_KEYS:
                     raise errors.UnrecognizedKeyError(
@@ -160,7 +164,8 @@ class ImageDefs(object):
         for base_name in self.sort_dependencies(image):
             istep += 1
             buildname = 'dmkbuild_%s_%d' % (image, istep)
-            squash = self.ymldefs[base_name].get('squash', False)
+            secret_files = self.ymldefs[base_name].get('secret_files', None)
+            squash = self.ymldefs[base_name].get('squash', bool(secret_files))
             build_steps.append(
                     dockermake.step.BuildStep(
                             base_name,
@@ -170,7 +175,8 @@ class ImageDefs(object):
                             bust_cache=base_name in rebuilds,
                             build_first=build_first, cache_from=cache_from,
                             buildargs=buildargs,
-                            squash=squash))
+                            squash=squash,
+                            secret_files=secret_files))
 
             base_image = buildname
             build_first = None
@@ -232,7 +238,7 @@ class ImageDefs(object):
         return dependencies.keys()
 
     def get_external_base_image(self, image, stack=None):
-        """ Makes sure that this image has exactly one external base image
+        """ Makes sure that this image has exactly one unique external base image
         """
         if stack is None:
             stack = list()

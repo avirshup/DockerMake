@@ -35,14 +35,15 @@ class BuildStep(object):
         img_def (dict): yaml definition of this image
         buildname (str): what to call this image, once built
         bust_cache(bool): never use docker cache for this build step
-        cache_from (str or list): use this(these) image(s) to resolve build cache
+        cache_from (Union[str, List[str]]): use this(these) image(s) to resolve build cache
         buildargs (dict): build-time "buildargs" for dockerfiles
         squash (bool): whether the result should be squashed
+        secret_files (List[str]): list of files to delete prior to squashing (squash must be True)
     """
 
     def __init__(self, imagename, baseimage, img_def, buildname,
                  build_first=None, bust_cache=False, cache_from=None,
-                 buildargs=None, squash=False):
+                 buildargs=None, squash=False, secret_files=None):
         self.imagename = imagename
         self.baseimage = baseimage
         self.img_def = img_def
@@ -55,6 +56,11 @@ class BuildStep(object):
         self.ignoredefs_file = img_def.get('ignorefile', img_def['_sourcefile'])
         self.buildargs = buildargs
         self.squash = squash
+        self.secret_files = secret_files
+
+        if secret_files:
+            assert squash, "Internal error - squash must be set if this step has secret files"
+
         if cache_from and isinstance(cache_from, str):
             self.cache_from = [cache_from]
         else:
@@ -118,7 +124,7 @@ class BuildStep(object):
             tempdir = self.write_dockerfile(dockerfile)
             context_path = os.path.abspath(os.path.expanduser(self.build_dir))
             kwargs.update(fileobj=None,
-                              dockerfile=os.path.join(DOCKER_TMPDIR, 'Dockerfile'))
+                          dockerfile=os.path.join(DOCKER_TMPDIR, 'Dockerfile'))
             print(colored('  Build context:', 'blue'),
                   colored(os.path.relpath(context_path), 'blue', attrs=['bold']))
 
@@ -157,7 +163,7 @@ class BuildStep(object):
             if self.squash and not client.version().get('Experimental', False):
                 raise errors.ExperimentalDaemonRequiredError(
                         'Docker error message:\n   ' + str(e) +
-                        '\n\nUsing `squash` and/or `secret-files` requires a docker'
+                        '\n\nUsing `squash` and/or `secret_files` requires a docker'
                         " daemon with experimental features enabled. See\n"
                         "    https://github.com/docker/docker-ce/blob/master/components/cli/"
                         "experimental/README.md")
@@ -279,8 +285,19 @@ class BuildStep(object):
 
     @property
     def dockerfile_lines(self):
-        return ['FROM %s\n' % self.baseimage,
-                self.img_def.get('build', '')]
+        lines = ['FROM %s\n' % self.baseimage]
+        if self.squash:
+            lines.append('# This build step should be built with --squash')
+        if self.secret_files:
+            assert self.squash
+            lines.append(('RUN for file in %s; do if [ -e $file ]; then '
+                          'echo "ERROR: Secret file $file already exists."; exit 1; '
+                          'fi; done;') % (' '.join(self.secret_files))
+                         )
+        lines.append(self.img_def.get('build', ''))
+        if self.secret_files:
+            lines.append('RUN rm -rf %s' % (' '.join(self.secret_files)))
+        return lines
 
 
 class FileCopyStep(BuildStep):
@@ -334,4 +351,3 @@ class FileCopyStep(BuildStep):
                 (self.sourcepath, self.sourceimage),
                 "ADD %s %s" % (os.path.basename(self.sourcepath), self.destpath),
                 '']
-

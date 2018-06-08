@@ -134,7 +134,6 @@ def test_cache_used_after_squash(experimental_daemon, squashcache):
     assert client.images.get('cache-test').id == firstimg.id
 
 
-squashcache = helpers.creates_images('cache-test')
 def test_handle_missing_squash_cache(experimental_daemon, squashcache):
     run_docker_make('-f data/secret-squash.yml cache-test invisible-secret')
     client = helpers.get_client()
@@ -154,6 +153,23 @@ def test_handle_missing_squash_cache(experimental_daemon, squashcache):
 
     # Sanity check - makes sure that the first image was in fact removed and not used for cache
     assert client.images.get('cache-test').id != firstimg.id
+
+
+hassecrets = helpers.creates_images('has-secrets')
+def test_secret_files(experimental_daemon, hassecrets):
+    run_docker_make('-f data/secret-squash.yml has-secrets')
+    foundfiles = helpers.find_files_in_layers('has-secrets', ['/root/secret1',
+                                                              '/root/secretdir/secretfile',
+                                                              '/root/secretdir/copy-of-secret1'])
+    assert not foundfiles['/root/secret1']
+    assert not foundfiles['/root/secretdir/secretfile']
+    assert foundfiles['/root/copy-of-secret1']
+
+
+secretfail = helpers.creates_images('secretfail')
+def test_build_fails_if_secrets_already_exist(experimental_daemon, secretfail):
+    with pytest.raises(dockermake.errors.BuildError):
+        run_docker_make('-f data/secret-squash.yml secretfail')
 
 
 def _check_files(img, **present):
