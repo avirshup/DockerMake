@@ -48,8 +48,10 @@ docker-make final
 
 ## What you can do with it
 
- * Define small pieces of configuration or functionality, then mix them together into production docker images.
+The punchline: define small pieces of configuration or functionality, then mix them together into production container images.
 
+#### Build steps
+A `DockerMake.yml` file contains discrete build "steps". These steps can depend on each other, forming a dependency graph. DockerMake solves the dependency graph and drives building of each image as necessary. This makes it easy to keep your images up-to-date while still taking advantage of docker's shared fileystem layers and build cache.
 
 #### Build automation
  * **new**: beta support for dockerfile build arguments
@@ -67,12 +69,10 @@ docker-make final
  * Build your artifacts in a well-provisioned "build" images, then copy them into smaller images for deployment
 
 #### Cache control
- - Invalidate docker's build cache at any point in the build (using `--bust-cache [layer]`)
+ - Invalidate docker's build cache at a specific step in the build using `--bust-cache [stepname]`
  - **new**: Use specific images to [resolve docker's build cache](https://github.com/moby/moby/issues/26065) (using `--cache-repo [repo]` and/or `--cache-tag [tag]`)
  - Force a clean rebuild without using the cache (using `--no-cache`)
  
-
-
  
 ## How to write DockerMake.yml
 DockerMake.yml lets you split your image build up into discrete, easy to manage _steps_ that can be mixed together (as a dependency graph) to produce your desired container image.
