@@ -113,14 +113,30 @@ def build_targets(args, defs, targets):
     else:
         buildargs = None
     built, warnings = [], []
-    builders = [defs.generate_build(t,
-                                    generate_name(t, args.repository, args.tag),
-                                    rebuilds=args.bust_cache,
-                                    cache_repo=args.cache_repo,
-                                    cache_tag=args.cache_tag,
-                                    keepbuildtags=args.keep_build_tags,
-                                    buildargs=buildargs)
-                for t in targets]
+
+    builders = []
+    cprint('\nRequested images: ', 'blue', end='')
+    print(', '.join("%s" % t for t in targets))
+
+    for t in targets:
+        try:
+            builder = defs.generate_build(t,
+                                          generate_name(t, args.repository, args.tag),
+                                          rebuilds=args.bust_cache,
+                                          cache_repo=args.cache_repo,
+                                          cache_tag=args.cache_tag,
+                                          keepbuildtags=args.keep_build_tags,
+                                          buildargs=buildargs)
+        except errors.NoBaseError:
+            if args.all:
+                cprint('WARNING:', 'red', end=' ')
+                print('not building image "%s" because it does not have a base (FROM) image defined'
+                      % t)
+            else:
+                raise
+        else:
+            builders.append(builder)
+
     for b in builders:
         b.build(client,
                 nobuild=args.no_build,

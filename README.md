@@ -13,7 +13,8 @@
     * [Cache control](#cache-control)
 + [How to write DockerMake.yml](#how-to-write-dockermakeyml)
   - [Defining an image](#defining-an-image)
-  - [Image definition fields](#image-definition-fields)
+  - [Image definition reference](#image-definition-reference)
+  - [Special fields](#special-fields)
   - [Notes](#notes-on-dockermake.yml)
 + [Example](#example)
 + [Command line usage](#command-line-usage)
@@ -102,7 +103,7 @@ NEXT_STEP_NAME:
      [additional Dockerfile instructions]
 ```
 
-### Image definition fields
+### Image definition reference
 Image definitions can include any of the following fields:
 
 * [**`FROM`/`FROM_DOCKERFILE`**](#fromfrom_dockerfile)
@@ -119,12 +120,12 @@ Image definitions can include any of the following fields:
 The docker image to use as a base for this image (and those that require it). This can be either the name of an image (using `FROM`) or the path to a local Dockerfile (using `FROM_DOCKERFILE`).
 
 *Example:*
-```yml
+```yaml
 baseimage:
    FROM: python:3.6-slim
 ```
 or
-```yml
+```yaml
 baseimage:
    FROM_DOCKERFILE: ../myproject/Dockerfile
    ```
@@ -132,7 +133,7 @@ baseimage:
 Multi-line string defining dockerfile commands to build this step. Note that these commands CANNOT contain 'FROM'. See also [Notes on multi-line strings](#Notes) below.
 
 *Example:*
-```yml
+```yaml
 build-image:
    requires:
      - baseimage
@@ -146,7 +147,7 @@ build-image:
 List of other image definitions to include in this one. `docker-make` will create a new image from a single DockerFile that includes an amalgamation of all image definitions.
 
 *Example:*
- ```yml
+ ```yaml
  my-tools:
    build: |
      RUN pip install numpy jupyter pandas
@@ -162,7 +163,7 @@ List of other image definitions to include in this one. `docker-make` will creat
 Path to a directory on your filesystem. This will be used to locate files for `ADD` and `COPY` commands in your dockerfile. See [Notes on relative paths](#Notes) below.
 
 *Example:*
-```yml
+```yaml
 data-image:
     build_directory: ./datafiles
     build: |
@@ -174,7 +175,7 @@ data-image:
 A custom [.dockerignore](https://docs.docker.com/engine/reference/builder/#dockerignore-file) for this step. This overrides any existing `.dockerignore` file in the build context. Only relevant for `ADD` or `COPY` commands when the `build_directory` is specified. This can either be a multi-line string (using the `ignore` field)  or the path to a file (using the `ignorefile` field).
 
 *Example:*
-```yml
+```yaml
 data-image:
     build_directory: ./datafiles
     build: |
@@ -190,7 +191,7 @@ An arbitrary comment (ignored by `docker-make`)
 
 #### **`copy_from`**
 Used to copy files into this image _from other images_ (to copy from your filesystem or a URL, use the standard `ADD` and `COPY` dockerfile commands). This is a mapping of mappings of the form:
-```yml
+```yaml
 [image-name]:
    [...]
    copy_from:
@@ -215,7 +216,7 @@ Additionally, unlike the vanilla `docker build --squash` command, downstream ima
 *Example:*
 In this example, we create a huge file in the image, do something with it, then erase it. 
 
-```yml
+```yaml
 count-a-big-file:
     FROM: alpine
     build: |
@@ -237,7 +238,7 @@ count-a-big-file   ...   20.9MB
 ```
 
 But, take them same definition and add a `squash: true` to it:
-```yml
+```yaml
 count-a-big-file:
     FROM: alpine
     squash: true
@@ -275,7 +276,7 @@ It's often necessary to perform some form of authentication during a build - for
 Files added or created in a given step can be designated as `secret_files` in DockerMake.yml. These files will be automatically erased at the end of the step, and the step's layers will be squashed to keep the files out of the history.
  
  **Example**
-```yml
+```yaml
 my-secret-steps:
     FROM: python:3.6
     build: |
@@ -285,6 +286,43 @@ my-secret-steps:
         - /opt/credentials
 ```
 
+### Special fields
+
+#### `_SOURCES_`
+
+You can include step definitions from other DockerMake.yml files by listing them in the `_SOURCES_`. For example:
+
+```yaml
+_SOURCES_:
+  - ~/mydefinitions/DockerMake.yml
+  - ./other/file.yml
+  [...]
+```
+
+Please note that relative file paths in each file are always interpreted _relative to the directory containing that file_.
+
+#### `_ALL_`
+
+By default, running `docker-make --all` will build all well-defined images defined in a file (and any files included via `_SOURCES_`). Images without a `FROM` or `FROM_DOCKERFILE` field in any of their requirements will be ignored.
+
+Alternatively, you can use the `_ALL_` field to designate specific images to build. For example, in the following definition, `docker-make --all` will only build `imgone` and `imgtwo`, not `baseimage`: 
+
+```yaml
+_ALL_:
+ - imgone
+ - imgtwo
+ 
+baseimage:
+  FROM: [...]
+  [...]
+ 
+imgone: [...]
+
+imgtwo: [...]
+```
+
+Note that the `_ALL_` fields from any files included via `_SOURCES_` are ignored.
+
  
 ### Notes on DockerMake.yml
 
@@ -292,7 +330,7 @@ my-secret-steps:
 
 **Multiline strings**: You'll usually want to express the `build` and `ignore` fields as multiline strings. To do so, use the following [YML "literal block scalar" style](http://yaml-multiline.info/), as in all examples above.
 
-```yml
+```yaml
 field-name: |
   [line 1]
   [line 2]
