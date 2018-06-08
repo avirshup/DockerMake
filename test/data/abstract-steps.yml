@@ -1,0 +1,8 @@
+abstract:
+  build: |
+    RUN touch /tmp/a
+
+definite:
+  FROM: alpine
+  requires:
+    - abstract

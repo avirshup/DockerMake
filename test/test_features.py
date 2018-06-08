@@ -217,3 +217,12 @@ buildargs = helpers.creates_images('target-buildargs')
 def test_build_args(buildargs):
     run_docker_make('-f data/build-args.yml --build-arg FILENAME=hello-world.txt target-buildargs')
     helpers.assert_file_content('target-buildargs', 'hello-world.txt', 'hello world')
+
+
+abstract_steps = helpers.creates_images('definite', 'abstract')
+def test_implicit_all_with_abstract_steps(abstract_steps):
+    run_docker_make('-f data/abstract-steps.yml --all')
+    client = helpers.get_client()
+    client.images.get('definite')
+    with pytest.raises(docker.errors.ImageNotFound):
+        client.images.get('abstract')
