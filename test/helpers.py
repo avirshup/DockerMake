@@ -77,3 +77,72 @@ def get_file_content(imgname, path):
     tf = tarfile.open(fileobj=io.BytesIO(content))
     val = tf.extractfile(os.path.basename(path)).read().decode('utf-8')
     return val
+
+
+def find_files_in_layers(img, files, tmpdir=None):
+    """ Scans an image's layers looking for specific files.
+
+    This is hard and a little brittle because we're NOT just looking at images, we're looking at
+    every layer stored internally for a given image. The solution here just uses `docker save`
+    to dump the layers to disk and examine them. This was written to parse the format of the
+    tarfile from docker 18.03.1; I'm not sure how stable this is, either backwards or forwards.
+
+    Note that this is used for TESTING ONLY, it's not part of the actual code (right now)
+
+    Args:
+        img (str): image id or name
+        files (List[str]): list of paths to look for
+        tmpdir (str): temporary directory to save
+
+    Returns:
+        dict[str, List[str]]: Dict storing the layers each file is present in
+    """
+    import tempfile
+    import json
+    client = get_client()
+    result = {f: [] for f in files}
+
+    if tmpdir is None:
+        tmpdir = tempfile.mkdtemp()
+
+    img = client.images.get(img)
+    tarpath = os.path.join(tmpdir, 'image.tar')
+    with open(tarpath, 'wb') as tf:
+        for chunk in img.save():
+            tf.write(chunk)
+
+    with tarfile.open(tarpath, 'r') as tf:
+        mf_obj = tf.extractfile('manifest.json')
+        manifest = json.load(mf_obj)
+        assert len(manifest) == 1
+        for path_to_layer_tar in manifest[0]['Layers']:
+            layer_tar_buffer = tf.extractfile(path_to_layer_tar)
+
+            with tarfile.open('r', fileobj=layer_tar_buffer) as layertar:
+                layer_results = _scan_tar(layertar, files)
+                for f in layer_results:
+                    result[f].append(path_to_layer_tar[:-len('layer.tar')])
+
+    return result
+
+
+def _scan_tar(tarobj, files):
+    """ Scans a tar object for specific files.
+
+    Args:
+        tarobj (tarfile.TarFile): tar object
+        files (List[str]): list of paths to look for
+
+    Returns:
+        List[str]: list of the files present (out of the requested paths)
+    """
+    result = []
+    for f in files:
+        try:
+            tf = tarobj.extractfile(f.lstrip('/'))
+        except (KeyError, FileNotFoundError):
+            continue
+
+        if tf is not None:
+            result.append(f)
+    return result

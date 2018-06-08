@@ -104,26 +104,17 @@ def test_cache_fallback(twin_simple_targets, docker_client):
 squashimgs = helpers.creates_images('visible-secret', 'invisible-secret')
 def test_squashed_secrets(squashimgs):
     run_docker_make('-f data/secret-squash.yml invisible-secret visible-secret')
-    client = helpers.get_client()
+    files_to_find = ['/opt/a', '/root/c', '/root/copy-c']
 
-    # For both of these images, /opt/a should be present in a base layer, while /root/c should not
-    for imgname in ('visible-secret', 'invisible-secret'):
+    visfiles = helpers.find_files_in_layers('visible-secret', files_to_find)
+    assert visfiles['/opt/a']
+    assert not visfiles['/root/c']
+    assert not visfiles['/root/copy-c']
 
-        # Sanity check - neither "secret" file should be present in the top layer
-        assert not helpers.file_exists(imgname, '/root/c')
-        assert not helpers.file_exists(imgname, '/opt/a')
-
-        img = client.images.get(imgname)
-        layers = img.attrs['RootFS']['Layers']
-        found_opt_a, found_root_c = False, False
-        for layerid in layers:
-            if layerid.lower() == '<missing>':
-                continue
-            found_opt_a = found_opt_a or helpers.file_exists(layerid, '/opt/a')
-            found_root_c = found_root_c or helpers.file_exists(layerid, '/root/c')
-
-        assert found_opt_a, "/opt/a not present in any layers of %s" % imgname
-        assert not found_root_c, "/root/c was found in a layer of %s" % imgname
+    invisfiles = helpers.find_files_in_layers('invisible-secret', files_to_find)
+    assert invisfiles['/opt/a']
+    assert not invisfiles['/root/c']
+    assert invisfiles['/root/copy-c']
 
 
 squashcache = helpers.creates_images('cache-test')
@@ -167,8 +158,8 @@ def _check_files(img, **present):
 
 
 twostep = helpers.creates_images('target-twostep',
-                         'dmkbuild_target-twostep_2',
-                         'dmkbuild_target-twostep_1')
+                                 'dmkbuild_target-twostep_2',
+                                 'dmkbuild_target-twostep_1')
 def test_keep_build_tags(twostep, docker_client):
     run_docker_make('-f data/twostep.yml target-twostep --keep-build-tags')
     docker_client.images.get('dmkbuild_target-twostep_1')
