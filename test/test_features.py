@@ -160,7 +160,7 @@ def test_secret_files(experimental_daemon, hassecrets):
     run_docker_make('-f data/secret-squash.yml has-secrets')
     foundfiles = helpers.find_files_in_layers('has-secrets', ['/root/secret1',
                                                               '/root/secretdir/secretfile',
-                                                              '/root/secretdir/copy-of-secret1'])
+                                                              '/root/copy-of-secret1'])
     assert not foundfiles['/root/secret1']
     assert not foundfiles['/root/secretdir/secretfile']
     assert foundfiles['/root/copy-of-secret1']
@@ -170,6 +170,11 @@ secretfail = helpers.creates_images('secretfail')
 def test_build_fails_if_secrets_already_exist(experimental_daemon, secretfail):
     with pytest.raises(dockermake.errors.BuildError):
         run_docker_make('-f data/secret-squash.yml secretfail')
+
+copy_with_secrets = helpers.creates_images('copy_with_secrets')
+def test_error_if_copy_with_secrets(copy_with_secrets):
+    with pytest.raises(dockermake.errors.ParsingFailure):
+        run_docker_make('-f data/copy_with_secrets.yml copy_with_secrets')
 
 
 def _check_files(img, **present):

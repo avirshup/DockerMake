@@ -117,7 +117,13 @@ class ImageDefs(object):
 
             if 'secret_files' in defn and not defn.get('squash', True):
                 raise errors.ParsingFailure(
-                        "Step '%s' defines secret_files, so 'squash' cannot be set to 'false'")
+                        "Step '%s' defines secret_files, so 'squash' cannot be set to 'false'"
+                        % imagename)
+
+            if defn.get('secret_files', None) and defn.get('copy_from', False):
+                raise errors.ParsingFailure(
+                        '`secret_files` currently is not implmemented to handle `copy_from`'
+                        ' (step %s)' % imagename)
 
             for key in defn:
                 if key not in RECOGNIZED_KEYS:
