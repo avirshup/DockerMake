@@ -27,7 +27,7 @@ DOCKER_TMPDIR = '_docker_make_tmp/'
 
 
 class BuildStep(object):
-    """ Stores and runs the instructions to build a single image.
+    """ Stores and runs the instructions to build a single step.
 
     Args:
         imagename (str): name of this image definition
@@ -35,13 +35,15 @@ class BuildStep(object):
         img_def (dict): yaml definition of this image
         buildname (str): what to call this image, once built
         bust_cache(bool): never use docker cache for this build step
-        cache_from (str or list): use this(these) image(s) to resolve build cache
+        cache_from (Union[str, List[str]]): use this(these) image(s) to resolve build cache
         buildargs (dict): build-time "buildargs" for dockerfiles
+        squash (bool): whether the result should be squashed
+        secret_files (List[str]): list of files to delete prior to squashing (squash must be True)
     """
 
     def __init__(self, imagename, baseimage, img_def, buildname,
                  build_first=None, bust_cache=False, cache_from=None,
-                 buildargs=None):
+                 buildargs=None, squash=False, secret_files=None):
         self.imagename = imagename
         self.baseimage = baseimage
         self.img_def = img_def
@@ -53,6 +55,12 @@ class BuildStep(object):
         self.custom_exclude = self._get_ignorefile(img_def)
         self.ignoredefs_file = img_def.get('ignorefile', img_def['_sourcefile'])
         self.buildargs = buildargs
+        self.squash = squash
+        self.secret_files = secret_files
+
+        if secret_files:
+            assert squash, "Internal error - squash must be set if this step has secret files"
+
         if cache_from and isinstance(cache_from, str):
             self.cache_from = [cache_from]
         else:
@@ -106,7 +114,8 @@ class BuildStep(object):
                       pull=pull,
                       nocache=not usecache,
                       decode=True, rm=True,
-                      buildargs=self.buildargs)
+                      buildargs=self.buildargs,
+                      squash=self.squash)
 
         if usecache:
             utils.set_build_cachefrom(self.cache_from, kwargs, client)
@@ -115,7 +124,7 @@ class BuildStep(object):
             tempdir = self.write_dockerfile(dockerfile)
             context_path = os.path.abspath(os.path.expanduser(self.build_dir))
             kwargs.update(fileobj=None,
-                              dockerfile=os.path.join(DOCKER_TMPDIR, 'Dockerfile'))
+                          dockerfile=os.path.join(DOCKER_TMPDIR, 'Dockerfile'))
             print(colored('  Build context:', 'blue'),
                   colored(os.path.relpath(context_path), 'blue', attrs=['bold']))
 
@@ -125,7 +134,7 @@ class BuildStep(object):
                 print(colored('  Custom .dockerignore from:', 'blue'),
                       colored(os.path.relpath(self.ignoredefs_file),  'blue', attrs=['bold']))
 
-                # AMV - this is a brittle internal call to the library
+                # AMV - this is a brittle call to an apparently "private' docker sdk method
                 context = docker.utils.tar(self.build_dir,
                                            exclude=self.custom_exclude,
                                            dockerfile=(os.path.join(DOCKER_TMPDIR, 'Dockerfile'),
@@ -136,13 +145,13 @@ class BuildStep(object):
 
         else:
             if sys.version_info.major == 2:
-                kwargs.update(fileobj=StringIO(dockerfile),
-                                  path=None,
-                                  dockerfile=None)
+                fileobj = StringIO(dockerfile)
             else:
-                kwargs.update(fileobj=BytesIO(dockerfile.encode('utf-8')),
-                                  path=None,
-                                  dockerfile=None)
+                fileobj = BytesIO(dockerfile.encode('utf-8'))
+
+            kwargs.update(fileobj=fileobj,
+                          path=None,
+                          dockerfile=None)
 
             tempdir = None
 
@@ -150,14 +159,99 @@ class BuildStep(object):
         stream = client.api.build(**kwargs)
         try:
             utils.stream_docker_logs(stream, self.buildname)
-        except (ValueError, docker.errors.APIError) as e:
+        except docker.errors.APIError as e:
+            if self.squash and not client.version().get('Experimental', False):
+                raise errors.ExperimentalDaemonRequiredError(
+                        'Docker error message:\n   ' + str(e) +
+                        '\n\nUsing `squash` and/or `secret_files` requires a docker'
+                        " daemon with experimental features enabled. See\n"
+                        "    https://github.com/docker/docker-ce/blob/master/components/cli/"
+                        "experimental/README.md")
+            else:
+                raise errors.BuildError(dockerfile, str(e), kwargs)
+        except ValueError as e:
             raise errors.BuildError(dockerfile, str(e), kwargs)
+
+        if self.squash and not self.bust_cache:
+            self._resolve_squash_cache(client)
 
         # remove the temporary dockerfile
         if tempdir is not None:
             os.unlink(os.path.join(tempdir, 'Dockerfile'))
             os.rmdir(tempdir)
 
+    def _resolve_squash_cache(self, client):
+        """
+        Currently doing a "squash" basically negates the cache for any subsequent layers.
+        But we can work around this by A) checking if the cache was successful for the _unsquashed_
+        version of the image, and B) if so, re-using an older squashed version of the image.
+
+        Three ways to do this:
+            1. get the shas of the before/after images from `image.history` comments
+                OR the output stream (or both). Both are extremely brittle, but also easy to access
+           2. Build the image without squash first. If the unsquashed image sha matches
+                  a cached one, substitute the unsuqashed image for the squashed one.
+                  If no match, re-run the steps with squash=True and store the resulting pair
+                  Less brittle than 1., but harder and defs not elegant
+           3. Use docker-squash as a dependency - this is by far the most preferable solution,
+              except that they don't yet support the newest docker sdk version.
+
+        Currently option 1 is implemented - we parse the comment string in the image history
+        to figure out which layers the image was squashed from
+        """
+        from .staging import BUILD_CACHEDIR
+
+        history = client.api.history(self.buildname)
+        comment = history[0].get('Comment', '').split()
+        if len(comment) != 4 or comment[0] != 'merge' or comment[2] != 'to':
+            print('WARNING: failed to parse this image\'s pre-squash history. '
+                  'The build will continue, but all subsequent layers will be rebuilt.')
+            return
+
+        squashed_sha = history[0]['Id']
+        start_squash_sha = comment[1]
+        end_squash_sha = comment[3]
+        cprint('  Layers %s to %s were squashed.' % (start_squash_sha, end_squash_sha), 'yellow')
+
+        # check cache
+        squashcache = os.path.join(BUILD_CACHEDIR, 'squashes')
+        if not os.path.exists(squashcache):
+            os.makedirs(squashcache)
+        cachepath = os.path.join(BUILD_CACHEDIR,
+                                 'squashes', '%s-%s' % (start_squash_sha, end_squash_sha))
+
+        # on hit, tag the squashedsha as the result of this build step
+        if os.path.exists(cachepath):
+            self._get_squashed_layer_cache(client, squashed_sha, cachepath)
+        else:
+            self._cache_squashed_layer(squashed_sha, cachepath)
+
+    def _cache_squashed_layer(self, squashed_sha, cachepath):
+        import uuid
+        from .staging import BUILD_TEMPDIR
+        # store association to the cache. A bit convoluted so that we can use the atomic os.rename
+
+        cprint('  Using newly built layer %s' % squashed_sha, 'yellow')
+        if not os.path.exists(BUILD_TEMPDIR):
+            os.makedirs(BUILD_TEMPDIR)
+        writepath = os.path.join(BUILD_TEMPDIR, str(uuid.uuid4()))
+        with open(writepath, 'w') as shafile:
+            shafile.write(squashed_sha)
+        os.rename(writepath, cachepath)
+
+    def _get_squashed_layer_cache(self, client, squashed_sha, cachepath):
+        with open(cachepath, 'r') as cachefile:
+            cached_squashed_sha = cachefile.read().strip()
+
+        try:
+            client.images.get(cached_squashed_sha)
+        except docker.errors.ImageNotFound:
+            cprint('  INFO: Old cache image %s no longer exists' % cached_squashed_sha, 'yellow')
+            return self._cache_squashed_layer(squashed_sha, cachepath)
+        else:
+            cprint('  Using squashed result from cache %s' % cached_squashed_sha, 'yellow')
+            client.api.tag(cached_squashed_sha, self.buildname, force=True)
+            return
 
     def write_dockerfile(self, dockerfile):
         tempdir = os.path.abspath(os.path.join(self.build_dir, DOCKER_TMPDIR))
@@ -191,8 +285,19 @@ class BuildStep(object):
 
     @property
     def dockerfile_lines(self):
-        return ['FROM %s\n' % self.baseimage,
-                self.img_def.get('build', '')]
+        lines = ['FROM %s\n' % self.baseimage]
+        if self.squash:
+            lines.append('# This build step should be built with --squash')
+        if self.secret_files:
+            assert self.squash
+            lines.append(('RUN for file in %s; do if [ -e $file ]; then '
+                          'echo "ERROR: Secret file $file already exists."; exit 1; '
+                          'fi; done;') % (' '.join(self.secret_files))
+                         )
+        lines.append(self.img_def.get('build', ''))
+        if self.secret_files:
+            lines.append('RUN rm -rf %s' % (' '.join(self.secret_files)))
+        return lines
 
 
 class FileCopyStep(BuildStep):
@@ -246,4 +351,3 @@ class FileCopyStep(BuildStep):
                 (self.sourcepath, self.sourceimage),
                 "ADD %s %s" % (os.path.basename(self.sourcepath), self.destpath),
                 '']
-

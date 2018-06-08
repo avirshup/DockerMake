@@ -198,7 +198,7 @@ def human_readable_size(num, suffix='B'):
 
 def stream_docker_logs(stream, name):
     textwidth = get_console_width() - 5
-    if textwidth <= 2:
+    if textwidth <= 10:
         textwidth = 100
     wrapper = textwrap.TextWrapper(initial_indent='  ',
                                    subsequent_indent='  ',
@@ -219,6 +219,8 @@ def stream_docker_logs(stream, name):
         elif 'status' in item and 'id' in item:  # for pulling images
             line = _show_xfer_state(pullstats, item)
             if line is None: continue
+        elif 'aux' in item and 'ID' in item['aux']:
+            line = 'New image id: %s' % item['aux']['ID']
         else:
             line = str(item)
 
