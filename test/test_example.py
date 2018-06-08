@@ -62,14 +62,14 @@ def test_push_dockerhub_with_login():
     if 'DOCKERUSER' not in os.environ or 'DOCKERTOKEN' not in os.environ:
         pytest.skip("Can't test dockerhub push - no login info available")
 
-    USER = os.environ['DOCKERUSER']
-    TOKEN = os.environ['DOCKERTOKEN']
+    user = os.environ['DOCKERUSER']
+    token = os.environ['DOCKERTOKEN']
 
     subprocess.check_call(['docker-make','testimage','--repo',
-                           'docker.io/%s/docker-make-test-push:' % USER,
+                           'docker.io/%s/docker-make-test-push:' % user,
                            '--tag', customtag, '--push',
-                           '--user', USER,
-                           '--token', TOKEN],
+                           '--user', user,
+                           '--token', token],
                           cwd=THISDIR)
 
     subprocess.check_call(['docker','pull',

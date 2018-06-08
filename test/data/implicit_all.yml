@@ -1,0 +1,12 @@
+_SOURCES_:
+  - included_all.yml
+
+t1:
+  FROM: alpine
+  build: |
+    RUN mkdir /opt && echo t1 > /opt/t1
+
+t2:
+  FROM: alpine
+  build: |
+    RUN mkdir /opt && echo t2 > /opt/t2
