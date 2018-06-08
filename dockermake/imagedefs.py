@@ -43,34 +43,40 @@ class ImageDefs(object):
         print('Working directory: %s' % os.path.abspath(os.curdir))
         print('Copy cache directory: %s' % staging.TMPDIR)
         try:
-            self.ymldefs = self.parse_yaml(self.makefile_path)
+            ymldefs, alltargets = self.parse_yaml(self.makefile_path)
         except errors.UserException:
             raise
         except Exception as exc:
             raise errors.ParsingFailure('Failed to read file %s:\n' % self.makefile_path +
                                         str(exc))
-        self.all_targets = self.ymldefs.pop('_ALL_', [])
+
+        self.ymldefs = ymldefs
+        self.all_targets = alltargets
         self._external_dockerfiles = {}
 
     def parse_yaml(self, filename):
+        # locate and verify the DockerMake.yml file
         fname = os.path.expanduser(filename)
         print('READING %s' % os.path.expanduser(fname))
         if fname in self._sources:
             raise errors.CircularSourcesError('Circular _SOURCES_ in %s' % self.makefile_path)
         self._sources.add(fname)
-
         with open(fname, 'r') as yaml_file:
             yamldefs = yaml.load(yaml_file)
-
         self._check_yaml_and_paths(filename, yamldefs)
 
+        # Recursively read all steps in included files from the _SOURCES_ field and
+        # store them in sourcedefs
         sourcedefs = {}
-        for s in yamldefs.get('_SOURCES_', []):
-            src = self.parse_yaml(s)
+        for s in yamldefs.pop('_SOURCES_', []):
+            src, _ = self.parse_yaml(s)  # ignore source's _ALL_ targets
             sourcedefs.update(src)
 
+        # Now add the steps defined in this file
         sourcedefs.update(yamldefs)
-        return sourcedefs
+        alltargets = sourcedefs.pop('_ALL_', [])
+
+        return sourcedefs, alltargets
 
     @staticmethod
     def _check_yaml_and_paths(ymlfilepath, yamldefs):
