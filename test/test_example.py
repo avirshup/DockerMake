@@ -3,6 +3,8 @@ import uuid
 import subprocess
 import pytest
 
+from .helpers import experimental_daemon
+
 EXAMPLEDIR = os.path.join('../example')
 THISDIR = os.path.dirname(__file__)
 
@@ -75,7 +77,7 @@ def test_push_dockerhub_with_login():
                            ])
 
 
-def test_example_build():
+def test_example_build(experimental_daemon):
     subprocess.check_call(
         "docker-make final --repo myrepo --tag mytag".split(),
         cwd=EXAMPLEDIR)
@@ -88,7 +90,7 @@ def test_example_build():
 def test_get_console_width_no_stderr_on_failure():
     # run docker-make with a non-console standard input
     #   (inspiration from Python's subprocess.py)
-    process = subprocess.Popen("docker-make final --repo myrepo --tag mytag".split(),
+    process = subprocess.Popen("docker-make devbase --repo myrepo --tag mytag".split(),
                                cwd=EXAMPLEDIR,
                                stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE,
@@ -100,8 +102,7 @@ def test_get_console_width_no_stderr_on_failure():
         process.wait()
         raise
     retcode = process.poll()
-    if retcode:
-        raise subprocess.CalledProcessError(retcode, process.args, output=stdout, stderr=stderr)
+    assert retcode == 0  # sanity check - did this build not work for some reason?
 
     assert b"ioctl for device" not in stderr
 
