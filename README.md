@@ -65,8 +65,8 @@ A `DockerMake.yml` file contains discrete build "steps". These steps can depend 
 **WARNING:** these features are in alpha - use with extreme caution
  
 #### File handling
- * Create builds that pull images from anywhere on your file system
- * Build your artifacts in a well-provisioned "build" images, then copy them into smaller images for deployment
+ * Create builds that ADD or COPY files from anywhere on your file system
+ * Build artifacts in one image, then copy them into smaller images for deployment
 
 #### Cache control
  - Invalidate docker's build cache at a specific step in the build using `--bust-cache [stepname]`
