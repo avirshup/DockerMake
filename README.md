@@ -90,7 +90,7 @@ FIRST_STEP_NAME:
     [Dockerfile commands go here]
 ```
 
-To to define images that use additional steps on top of this first one, list that image in the `requires` field:
+Use the `requires` field to define additional steps that extend the first one:
 
 ```yaml
 FIRST_STEP_NAME:
