@@ -17,6 +17,8 @@ from __future__ import print_function
 from builtins import object
 
 import os
+import six
+from io import StringIO
 from collections import OrderedDict
 import yaml
 import uuid
@@ -62,7 +64,12 @@ class ImageDefs(object):
             raise errors.CircularSourcesError('Circular _SOURCES_ in %s' % self.makefile_path)
         self._sources.add(fname)
         with open(fname, 'r') as yaml_file:
-            yamldefs = yaml.load(yaml_file)
+            content = yaml_file.read()
+            if fname.endswith('.j2') or fname.endswith('.jinja2'):
+                import jinja2
+                template = jinja2.Template(content)
+                content = template.render()
+            yamldefs = yaml.load(six.StringIO(content))
         self._check_yaml_and_paths(filename, yamldefs)
 
         # Recursively read all steps in included files from the _SOURCES_ field and
@@ -103,7 +110,7 @@ class ImageDefs(object):
                 if not isinstance(defn['copy_from'], dict):
                     raise errors.ParsingFailure((
                             'Syntax error in file "%s": \n' +
-                            'The "copy_from" field in image definition "%s" is not \n' 
+                            'The "copy_from" field in image definition "%s" is not \n'
                             'a key:value list.') % (ymlfilepath, imagename))
                 for otherimg, value in defn.get('copy_from', {}).items():
                     if not isinstance(value, dict):
@@ -325,5 +332,3 @@ def _get_abspath(pathroot, relpath):
         buildpath = os.path.join(os.path.abspath(path), buildpath)
 
     return buildpath
-
-

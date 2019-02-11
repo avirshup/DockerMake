@@ -1,0 +1,12 @@
+first:
+  FROM: python:3.6-slim
+  build: |
+    RUN echo 'test' > /opt/test
+
+{% for t in ['a', 'b'] %}
+target-{{ t }}:
+  requires:
+    - first
+  build: |
+    RUN echo 'test-{{ t }}' > /opt/test
+{% endfor %}

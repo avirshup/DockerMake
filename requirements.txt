@@ -1,3 +1,4 @@
+six
 termcolor
 docker >=3.2
 future

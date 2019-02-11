@@ -226,3 +226,10 @@ def test_implicit_all_with_abstract_steps(abstract_steps):
     client.images.get('definite')
     with pytest.raises(docker.errors.ImageNotFound):
         client.images.get('abstract')
+
+
+jinja_targets = helpers.creates_images('target-a', 'target-b')
+def test_jinja_preprocessing(jinja_targets, docker_client):
+    run_docker_make('-f data/jinja.yml.j2 target-a target-b')
+    docker_client.images.get('target-a')
+    docker_client.images.get('target-b')
