@@ -1,8 +1,8 @@
-FROM python:3.6-alpine
+FROM python:3.8-alpine
 
-RUN apk add --no-cache git
+RUN apk add --no-cache git build-base
 ADD requirements.txt /tmp
-RUN pip install -r /tmp/requirements.txt pytest
+RUN pip install -r /tmp/requirements.txt
 
 ADD . /opt/DockerMake
 WORKDIR /opt/DockerMake

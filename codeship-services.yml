@@ -23,26 +23,26 @@ services:
       dockerfile: Dockerfile
       context: .
 
-  testenv-python2.7:
-    <<: *testenv
-    build:
-      <<: *testbuild
-      args:
-        PYVERSION: "2.7"
-
-  testenv-python3.5:
-    <<: *testenv
-    build:
-      <<: *testbuild
-      args:
-        PYVERSION: "3.5"
-
   testenv-python3.6:
     <<: *testenv
     build:
       <<: *testbuild
       args:
         PYVERSION: "3.6"
+
+  testenv-python3.7:
+    <<: *testenv
+    build:
+      <<: *testbuild
+      args:
+        PYVERSION: "3.7"
+
+  testenv-python3.8:
+    <<: *testenv
+    build:
+      <<: *testbuild
+      args:
+        PYVERSION: "3.8"
 
   deploy-env:
     <<: *sharedvol

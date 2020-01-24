@@ -1,4 +1,4 @@
-termcolor
-docker >=3.2
-future
-pyyaml
+black==19.10b0
+docker==4.1.0
+pytest==5.3.4
+PyYAML==5.3

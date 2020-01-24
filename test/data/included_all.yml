@@ -1,9 +1,9 @@
 t3:
   FROM: alpine
   build: |
-    RUN mkdir /opt && echo t3 > /opt/t3
+    RUN mkdir -p /opt && echo t3 > /opt/t3
 
 t4:
   FROM: alpine
   build: |
-    RUN mkdir /opt && echo t4 > /opt/t4
+    RUN mkdir -p /opt && echo t4 > /opt/t4

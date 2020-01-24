@@ -23,7 +23,8 @@ import docker.utils, docker.errors
 from . import utils
 from . import staging
 from . import errors
-DOCKER_TMPDIR = '_docker_make_tmp/'
+
+DOCKER_TMPDIR = "_docker_make_tmp/"
 
 
 class BuildStep(object):
@@ -41,25 +42,37 @@ class BuildStep(object):
         secret_files (List[str]): list of files to delete prior to squashing (squash must be True)
     """
 
-    def __init__(self, imagename, baseimage, img_def, buildname,
-                 build_first=None, bust_cache=False, cache_from=None,
-                 buildargs=None, squash=False, secret_files=None):
+    def __init__(
+        self,
+        imagename,
+        baseimage,
+        img_def,
+        buildname,
+        build_first=None,
+        bust_cache=False,
+        cache_from=None,
+        buildargs=None,
+        squash=False,
+        secret_files=None,
+    ):
         self.imagename = imagename
         self.baseimage = baseimage
         self.img_def = img_def
         self.buildname = buildname
-        self.build_dir = img_def.get('build_directory', None)
+        self.build_dir = img_def.get("build_directory", None)
         self.bust_cache = bust_cache
-        self.sourcefile = img_def['_sourcefile']
+        self.sourcefile = img_def["_sourcefile"]
         self.build_first = build_first
         self.custom_exclude = self._get_ignorefile(img_def)
-        self.ignoredefs_file = img_def.get('ignorefile', img_def['_sourcefile'])
+        self.ignoredefs_file = img_def.get("ignorefile", img_def["_sourcefile"])
         self.buildargs = buildargs
         self.squash = squash
         self.secret_files = secret_files
 
         if secret_files:
-            assert squash, "Internal error - squash must be set if this step has secret files"
+            assert (
+                squash
+            ), "Internal error - squash must be set if this step has secret files"
 
         if cache_from and isinstance(cache_from, str):
             self.cache_from = [cache_from]
@@ -68,17 +81,17 @@ class BuildStep(object):
 
     @staticmethod
     def _get_ignorefile(img_def):
-        if img_def.get('ignore', None) is not None:
-            assert 'ignorefile' not in img_def
-            lines = img_def['ignore'].splitlines()
-        elif img_def.get('ignorefile', None) is not None:
-            assert 'ignore' not in img_def
-            with open(img_def['ignorefile'], 'r') as igfile:
+        if img_def.get("ignore", None) is not None:
+            assert "ignorefile" not in img_def
+            lines = img_def["ignore"].splitlines()
+        elif img_def.get("ignorefile", None) is not None:
+            assert "ignore" not in img_def
+            with open(img_def["ignorefile"], "r") as igfile:
                 lines = igfile.read().splitlines()
         else:
             return None
 
-        lines.append('_docker_make_tmp')
+        lines.append("_docker_make_tmp")
 
         return list(filter(bool, lines))
 
@@ -93,10 +106,12 @@ class BuildStep(object):
             pull (bool): whether to pull dependent layers from remote repositories
             usecache (bool): whether to use cached layers or rebuild from scratch
         """
-        print(colored('  Building step', 'blue'),
-              colored(self.imagename, 'blue', attrs=['bold']),
-              colored('defined in', 'blue'),
-              colored(self.sourcefile, 'blue', attrs=['bold']))
+        print(
+            colored("  Building step", "blue"),
+            colored(self.imagename, "blue", attrs=["bold"]),
+            colored("defined in", "blue"),
+            colored(self.sourcefile, "blue", attrs=["bold"]),
+        )
 
         if self.build_first and not self.build_first.built:
             self.build_external_dockerfile(client, self.build_first)
@@ -105,17 +120,22 @@ class BuildStep(object):
             usecache = False
 
         if not usecache:
-            cprint('  Build cache disabled - this image will be rebuilt from scratch',
-                   'yellow')
+            cprint(
+                "  Build cache disabled - this image will be rebuilt from scratch",
+                "yellow",
+            )
 
-        dockerfile = u'\n'.join(self.dockerfile_lines)
+        dockerfile = "\n".join(self.dockerfile_lines)
 
-        kwargs = dict(tag=self.buildname,
-                      pull=pull,
-                      nocache=not usecache,
-                      decode=True, rm=True,
-                      buildargs=self.buildargs,
-                      squash=self.squash)
+        kwargs = dict(
+            tag=self.buildname,
+            pull=pull,
+            nocache=not usecache,
+            decode=True,
+            rm=True,
+            buildargs=self.buildargs,
+            squash=self.squash,
+        )
 
         if usecache:
             utils.set_build_cachefrom(self.cache_from, kwargs, client)
@@ -123,35 +143,40 @@ class BuildStep(object):
         if self.build_dir is not None:
             tempdir = self.write_dockerfile(dockerfile)
             context_path = os.path.abspath(os.path.expanduser(self.build_dir))
-            kwargs.update(fileobj=None,
-                          dockerfile=os.path.join(DOCKER_TMPDIR, 'Dockerfile'))
-            print(colored('  Build context:', 'blue'),
-                  colored(os.path.relpath(context_path), 'blue', attrs=['bold']))
+            kwargs.update(
+                fileobj=None, dockerfile=os.path.join(DOCKER_TMPDIR, "Dockerfile")
+            )
+            print(
+                colored("  Build context:", "blue"),
+                colored(os.path.relpath(context_path), "blue", attrs=["bold"]),
+            )
 
             if not self.custom_exclude:
                 kwargs.update(path=context_path)
             else:
-                print(colored('  Custom .dockerignore from:', 'blue'),
-                      colored(os.path.relpath(self.ignoredefs_file),  'blue', attrs=['bold']))
+                print(
+                    colored("  Custom .dockerignore from:", "blue"),
+                    colored(
+                        os.path.relpath(self.ignoredefs_file), "blue", attrs=["bold"]
+                    ),
+                )
 
                 # AMV - this is a brittle call to an apparently "private' docker sdk method
-                context = docker.utils.tar(self.build_dir,
-                                           exclude=self.custom_exclude,
-                                           dockerfile=(os.path.join(DOCKER_TMPDIR, 'Dockerfile'),
-                                                       dockerfile),
-                                           gzip=False)
-                kwargs.update(fileobj=context,
-                                  custom_context=True)
+                context = docker.utils.tar(
+                    self.build_dir,
+                    exclude=self.custom_exclude,
+                    dockerfile=(os.path.join(DOCKER_TMPDIR, "Dockerfile"), dockerfile),
+                    gzip=False,
+                )
+                kwargs.update(fileobj=context, custom_context=True)
 
         else:
             if sys.version_info.major == 2:
                 fileobj = StringIO(dockerfile)
             else:
-                fileobj = BytesIO(dockerfile.encode('utf-8'))
+                fileobj = BytesIO(dockerfile.encode("utf-8"))
 
-            kwargs.update(fileobj=fileobj,
-                          path=None,
-                          dockerfile=None)
+            kwargs.update(fileobj=fileobj, path=None, dockerfile=None)
 
             tempdir = None
 
@@ -160,13 +185,15 @@ class BuildStep(object):
         try:
             utils.stream_docker_logs(stream, self.buildname)
         except docker.errors.APIError as e:
-            if self.squash and not client.version().get('Experimental', False):
+            if self.squash and not client.version().get("Experimental", False):
                 raise errors.ExperimentalDaemonRequiredError(
-                        'Docker error message:\n   ' + str(e) +
-                        '\n\nUsing `squash` and/or `secret_files` requires a docker'
-                        " daemon with experimental features enabled. See\n"
-                        "    https://github.com/docker/docker-ce/blob/master/components/cli/"
-                        "experimental/README.md")
+                    "Docker error message:\n   "
+                    + str(e)
+                    + "\n\nUsing `squash` and/or `secret_files` requires a docker"
+                    " daemon with experimental features enabled. See\n"
+                    "    https://github.com/docker/docker-ce/blob/master/components/cli/"
+                    "experimental/README.md"
+                )
             else:
                 raise errors.BuildError(dockerfile, str(e), kwargs)
         except ValueError as e:
@@ -177,7 +204,7 @@ class BuildStep(object):
 
         # remove the temporary dockerfile
         if tempdir is not None:
-            os.unlink(os.path.join(tempdir, 'Dockerfile'))
+            os.unlink(os.path.join(tempdir, "Dockerfile"))
             os.rmdir(tempdir)
 
     def _resolve_squash_cache(self, client):
@@ -202,23 +229,29 @@ class BuildStep(object):
         from .staging import BUILD_CACHEDIR
 
         history = client.api.history(self.buildname)
-        comment = history[0].get('Comment', '').split()
-        if len(comment) != 4 or comment[0] != 'merge' or comment[2] != 'to':
-            print('WARNING: failed to parse this image\'s pre-squash history. '
-                  'The build will continue, but all subsequent layers will be rebuilt.')
+        comment = history[0].get("Comment", "").split()
+        if len(comment) != 4 or comment[0] != "merge" or comment[2] != "to":
+            print(
+                "WARNING: failed to parse this image's pre-squash history. "
+                "The build will continue, but all subsequent layers will be rebuilt."
+            )
             return
 
-        squashed_sha = history[0]['Id']
+        squashed_sha = history[0]["Id"]
         start_squash_sha = comment[1]
         end_squash_sha = comment[3]
-        cprint('  Layers %s to %s were squashed.' % (start_squash_sha, end_squash_sha), 'yellow')
+        cprint(
+            "  Layers %s to %s were squashed." % (start_squash_sha, end_squash_sha),
+            "yellow",
+        )
 
         # check cache
-        squashcache = os.path.join(BUILD_CACHEDIR, 'squashes')
+        squashcache = os.path.join(BUILD_CACHEDIR, "squashes")
         if not os.path.exists(squashcache):
             os.makedirs(squashcache)
-        cachepath = os.path.join(BUILD_CACHEDIR,
-                                 'squashes', '%s-%s' % (start_squash_sha, end_squash_sha))
+        cachepath = os.path.join(
+            BUILD_CACHEDIR, "squashes", "%s-%s" % (start_squash_sha, end_squash_sha)
+        )
 
         # on hit, tag the squashedsha as the result of this build step
         if os.path.exists(cachepath):
@@ -229,74 +262,89 @@ class BuildStep(object):
     def _cache_squashed_layer(self, squashed_sha, cachepath):
         import uuid
         from .staging import BUILD_TEMPDIR
+
         # store association to the cache. A bit convoluted so that we can use the atomic os.rename
 
-        cprint('  Using newly built layer %s' % squashed_sha, 'yellow')
+        cprint("  Using newly built layer %s" % squashed_sha, "yellow")
         if not os.path.exists(BUILD_TEMPDIR):
             os.makedirs(BUILD_TEMPDIR)
         writepath = os.path.join(BUILD_TEMPDIR, str(uuid.uuid4()))
-        with open(writepath, 'w') as shafile:
+        with open(writepath, "w") as shafile:
             shafile.write(squashed_sha)
         os.rename(writepath, cachepath)
 
     def _get_squashed_layer_cache(self, client, squashed_sha, cachepath):
-        with open(cachepath, 'r') as cachefile:
+        with open(cachepath, "r") as cachefile:
             cached_squashed_sha = cachefile.read().strip()
 
         try:
             client.images.get(cached_squashed_sha)
         except docker.errors.ImageNotFound:
-            cprint('  INFO: Old cache image %s no longer exists' % cached_squashed_sha, 'yellow')
+            cprint(
+                "  INFO: Old cache image %s no longer exists" % cached_squashed_sha,
+                "yellow",
+            )
             return self._cache_squashed_layer(squashed_sha, cachepath)
         else:
-            cprint('  Using squashed result from cache %s' % cached_squashed_sha, 'yellow')
+            cprint(
+                "  Using squashed result from cache %s" % cached_squashed_sha, "yellow"
+            )
             client.api.tag(cached_squashed_sha, self.buildname, force=True)
             return
 
     def write_dockerfile(self, dockerfile):
         tempdir = os.path.abspath(os.path.join(self.build_dir, DOCKER_TMPDIR))
-        temp_df = os.path.join(tempdir, 'Dockerfile')
+        temp_df = os.path.join(tempdir, "Dockerfile")
         if not os.path.isdir(tempdir):
             os.makedirs(tempdir)
-        with open(temp_df, 'w') as df_out:
+        with open(temp_df, "w") as df_out:
             print(dockerfile, file=df_out)
         return tempdir
 
     @staticmethod
     def build_external_dockerfile(client, image):
         import docker.errors
-        cprint("  Building base image from %s" % image, 'blue')
+
+        cprint("  Building base image from %s" % image, "blue")
         assert not image.built
 
-        stream = client.api.build(path=os.path.dirname(image.path),
-                                  dockerfile=os.path.basename(image.path),
-                                  tag=image.tag,
-                                  decode=True,
-                                  rm=True)
+        stream = client.api.build(
+            path=os.path.dirname(image.path),
+            dockerfile=os.path.basename(image.path),
+            tag=image.tag,
+            decode=True,
+            rm=True,
+        )
 
         try:
             utils.stream_docker_logs(stream, image)
         except (ValueError, docker.errors.APIError) as e:
             raise errors.ExternalBuildError(
-                    'Error building Dockerfile at %s.  ' % image.path +
-                    'Please check it for errors\n. Docker API error message:' + str(e))
+                "Error building Dockerfile at %s.  " % image.path
+                + "Please check it for errors\n. Docker API error message:"
+                + str(e)
+            )
         image.built = True
-        cprint("  Finished building Dockerfile at %s" % image.path, 'green')
+        cprint("  Finished building Dockerfile at %s" % image.path, "green")
 
     @property
     def dockerfile_lines(self):
-        lines = ['FROM %s\n' % self.baseimage]
+        lines = ["FROM %s\n" % self.baseimage]
         if self.squash:
-            lines.append('# This build step should be built with --squash')
+            lines.append("# This build step should be built with --squash")
         if self.secret_files:
             assert self.squash
-            lines.append(('RUN for file in %s; do if [ -e $file ]; then '
-                          'echo "ERROR: Secret file $file already exists."; exit 1; '
-                          'fi; done;') % (' '.join(self.secret_files))
-                         )
-        lines.append(self.img_def.get('build', ''))
+            lines.append(
+                (
+                    "RUN for file in %s; do if [ -e $file ]; then "
+                    'echo "ERROR: Secret file $file already exists."; exit 1; '
+                    "fi; done;"
+                )
+                % (" ".join(self.secret_files))
+            )
+        lines.append(self.img_def.get("build", ""))
         if self.secret_files:
-            lines.append('RUN rm -rf %s' % (' '.join(self.secret_files)))
+            lines.append("RUN rm -rf %s" % (" ".join(self.secret_files)))
         return lines
 
 
@@ -314,8 +362,9 @@ class FileCopyStep(BuildStep):
         buildname (str): what to call this image, once built
         cache_from (str or list): use this(these) image(s) to resolve build cache
     """
+
     def __init__(self, sourceimage, sourcepath, destpath, *args, **kwargs):
-        kwargs.pop('bust_cache', None)
+        kwargs.pop("bust_cache", None)
         super(FileCopyStep, self).__init__(*args, **kwargs)
         self.sourceimage = sourceimage
         self.sourcepath = sourcepath
@@ -327,8 +376,9 @@ class FileCopyStep(BuildStep):
             `pull` and `usecache` are for compatibility only. They're irrelevant because
             hey were applied when BUILDING self.sourceimage
         """
-        stage = staging.StagedFile(self.sourceimage, self.sourcepath, self.destpath,
-                                   cache_from=self.cache_from)
+        stage = staging.StagedFile(
+            self.sourceimage, self.sourcepath, self.destpath, cache_from=self.cache_from
+        )
         stage.stage(self.baseimage, self.buildname)
 
     @property
@@ -337,17 +387,22 @@ class FileCopyStep(BuildStep):
         Used only when printing dockerfiles, not for building
         """
         w1 = colored(
-                'WARNING: this build includes files that are built in other images!!! The generated'
-                '\n         Dockerfile must be built in a directory that contains'
-                ' the file/directory:',
-                'red', attrs=['bold'])
-        w2 = colored('         ' + self.sourcepath, 'red')
-        w3 = (colored('         from image ', 'red')
-              + colored(self.sourcepath, 'blue', attrs=['bold']))
-        print('\n'.join((w1, w2, w3)))
-        return ["",
-                "# Warning: the file \"%s\" from the image \"%s\""
-                " must be present in this build context!!" %
-                (self.sourcepath, self.sourceimage),
-                "ADD %s %s" % (os.path.basename(self.sourcepath), self.destpath),
-                '']
+            "WARNING: this build includes files that are built in other images!!! The generated"
+            "\n         Dockerfile must be built in a directory that contains"
+            " the file/directory:",
+            "red",
+            attrs=["bold"],
+        )
+        w2 = colored("         " + self.sourcepath, "red")
+        w3 = colored("         from image ", "red") + colored(
+            self.sourcepath, "blue", attrs=["bold"]
+        )
+        print("\n".join((w1, w2, w3)))
+        return [
+            "",
+            '# Warning: the file "%s" from the image "%s"'
+            " must be present in this build context!!"
+            % (self.sourcepath, self.sourceimage),
+            "ADD %s %s" % (os.path.basename(self.sourcepath), self.destpath),
+            "",
+        ]

@@ -4,9 +4,9 @@ _SOURCES_:
 t1:
   FROM: alpine
   build: |
-    RUN mkdir /opt && echo t1 > /opt/t1
+    RUN mkdir -p /opt && echo t1 > /opt/t1
 
 t2:
   FROM: alpine
   build: |
-    RUN mkdir /opt && echo t2 > /opt/t2
+    RUN mkdir -p /opt && echo t2 > /opt/t2
