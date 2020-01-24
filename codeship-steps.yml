@@ -1,3 +1,7 @@
+- name: lint-and-format-check
+  service: avirshup/docker-make
+  command: black --check DockerMake
+
 - name: clean-build
   service: avirshup/docker-make
   command: sh -c "rm -f /opt/distfiles/*"
@@ -9,9 +13,9 @@
 - name: test
   type: serial
   services:
-    - testenv-python2.7
-    - testenv-python3.5
     - testenv-python3.6
+    - testenv-python3.7
+    - testenv-python3.8
   steps:
     - command: sh -c "pip install /opt/distfiles/DockerMake-*.tar.gz && py.test -v"
 
@@ -23,7 +27,6 @@
   image_tag: "{{.Branch}}"
   registry: https://index.docker.io/v1
   encrypted_dockercfg_path: deployment/dockercfg.crypt
-
 
 
 - name: deploy-pypi
