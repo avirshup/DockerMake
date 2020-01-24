@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools"]
+
+[tool.black]
+target-version = ['py36', 'py37', 'py38']
+exclude = '''
+(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | \.idea
+  | \.vscode
+  | \.pytest_cache
+  | _build
+  | build
+  | dist
+  | versioneer\.py
+)
+'''

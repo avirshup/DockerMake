@@ -18,12 +18,14 @@ import pprint
 from termcolor import cprint
 from future.utils import PY2
 
+
 class UserException(Exception):
     """
     For errors which should NOT produce a traceback - they should be caught,
     the message written to the CLI, then the program should quit with the specified
     error code
     """
+
     CODE = None
 
 
@@ -87,16 +89,16 @@ class BuildError(Exception):
     CODE = 200
 
     def __init__(self, dockerfile, item, build_args):
-        with open('dockerfile.fail', 'w') as dff:
+        with open("dockerfile.fail", "w") as dff:
             print(dockerfile, file=dff)
 
         buffer_class = io.BytesIO if PY2 else io.StringIO
         with buffer_class() as stream:
-            cprint('Docker build failure', 'red', attrs=['bold'], file=stream)
-            print('\n   -------- Docker daemon output --------', file=stream)
+            cprint("Docker build failure", "red", attrs=["bold"], file=stream)
+            print("\n   -------- Docker daemon output --------", file=stream)
             pprint.pprint(item, stream, indent=4)
-            print('   -------- Arguments to client.build --------', file=stream)
+            print("   -------- Arguments to client.build --------", file=stream)
             pprint.pprint(build_args, stream, indent=4)
-            print('This dockerfile was written to dockerfile.fail', file=stream)
+            print("This dockerfile was written to dockerfile.fail", file=stream)
             stream.seek(0)
             super(BuildError, self).__init__(stream.read())

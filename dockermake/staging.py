@@ -26,18 +26,18 @@ from . import utils
 from . import errors
 
 TMPDIR = tempfile.gettempdir()
-BUILD_CACHEDIR = os.path.join(TMPDIR, 'dmk_cache')
-BUILD_TEMPDIR = os.path.join(TMPDIR, 'dmk_download')
+BUILD_CACHEDIR = os.path.join(TMPDIR, "dmk_cache")
+BUILD_TEMPDIR = os.path.join(TMPDIR, "dmk_download")
 
 
 def clear_copy_cache():
     for path in (BUILD_CACHEDIR, BUILD_TEMPDIR):
         if os.path.exists(path):
             assert os.path.isdir(path), "'%s' is not a directory!"
-            cprint('Removing docker-make cache %s' % path, 'yellow')
+            cprint("Removing docker-make cache %s" % path, "yellow")
             shutil.rmtree(path)
         else:
-            cprint('Cache directory %s does not exist.' % path, 'red')
+            cprint("Cache directory %s does not exist." % path, "red")
 
 
 class StagedFile(object):
@@ -49,6 +49,7 @@ class StagedFile(object):
         destpath (str): path in the target image
         cache_from (str or list): use this(these) image(s) to resolve build cache
     """
+
     def __init__(self, sourceimage, sourcepath, destpath, cache_from=None):
         self.sourceimage = sourceimage
         self.sourcepath = sourcepath
@@ -65,46 +66,49 @@ class StagedFile(object):
             newimage (str): name of the created image
         """
         client = utils.get_client()
-        cprint('  Copying file from "%s:/%s" \n                 to "%s://%s/"'
-               % (self.sourceimage, self.sourcepath, startimage, self.destpath),
-               'blue')
+        cprint(
+            '  Copying file from "%s:/%s" \n                 to "%s://%s/"'
+            % (self.sourceimage, self.sourcepath, startimage, self.destpath),
+            "blue",
+        )
 
         # copy build artifacts from the container if necessary
         cachedir = self._setcache(client)
         cacherelpath = os.path.relpath(cachedir, TMPDIR)
 
         # if cached file doesn't exist (presumably purged by OS), trigger it to be recreated
-        if os.path.exists(cachedir) and not os.path.exists(os.path.join(cachedir, 'content.tar')):
+        if os.path.exists(cachedir) and not os.path.exists(
+            os.path.join(cachedir, "content.tar")
+        ):
             shutil.rmtree(cachedir)
 
         if not os.path.exists(cachedir):
-            print(' * Creating cache at %s' % cacherelpath)
+            print(" * Creating cache at %s" % cacherelpath)
             container = client.containers.create(self.sourceimage)
             try:
                 tarfile_stream, tarfile_stats = container.get_archive(self.sourcepath)
             except docker.errors.NotFound:
                 raise errors.MissingFileError(
-                        'Cannot copy file "%s" from image "%s" - it does not exist!' %
-                        (self.sourcepath, self.sourceimage))
+                    'Cannot copy file "%s" from image "%s" - it does not exist!'
+                    % (self.sourcepath, self.sourceimage)
+                )
 
             # write files to disk (would be nice to stream them, haven't gotten it to work)
             tempdir = tempfile.mkdtemp(dir=BUILD_TEMPDIR)
-            with open(os.path.join(tempdir, 'content.tar'), 'wb') as localfile:
+            with open(os.path.join(tempdir, "content.tar"), "wb") as localfile:
                 for chunk in tarfile_stream:
                     localfile.write(chunk)
             os.mkdir(cachedir)
             os.rename(tempdir, cachedir)
         else:
-            print('  Using cached files from %s' % cacherelpath)
+            print("  Using cached files from %s" % cacherelpath)
 
         # write Dockerfile for the new image and then build it
-        dockerfile = 'FROM %s\nADD content.tar %s' % (startimage, self.destpath)
-        with open(os.path.join(cachedir, 'Dockerfile'), 'w') as df:
+        dockerfile = "FROM %s\nADD content.tar %s" % (startimage, self.destpath)
+        with open(os.path.join(cachedir, "Dockerfile"), "w") as df:
             df.write(dockerfile)
 
-        buildargs = dict(path=cachedir,
-                         tag=newimage,
-                         decode=True)
+        buildargs = dict(path=cachedir, tag=newimage, decode=True)
         utils.set_build_cachefrom(self.cache_from, buildargs, client)
 
         # Build and show logs
@@ -125,13 +129,15 @@ class StagedFile(object):
             if not os.path.exists(BUILD_TEMPDIR):
                 os.mkdir(BUILD_TEMPDIR)
 
-            image_cachedir = os.path.join(BUILD_CACHEDIR,
-                                          self._sourceobj.id.replace('sha256:', ''))
+            image_cachedir = os.path.join(
+                BUILD_CACHEDIR, self._sourceobj.id.replace("sha256:", "")
+            )
             if not os.path.exists(image_cachedir):
                 os.mkdir(image_cachedir)
 
-            self._cachedir = os.path.join(image_cachedir,
-                                          self.sourcepath.replace('/', '_-'))
+            self._cachedir = os.path.join(
+                image_cachedir, self.sourcepath.replace("/", "_-")
+            )
             return self._cachedir
 
         else:  # make sure image ID hasn't changed

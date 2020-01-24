@@ -29,6 +29,7 @@ def creates_images(*imgnames):
     """ Creates fixtures to make sure to remove named images after (and before, if necessary)
     running a test
     """
+
     @pytest.fixture
     def fixture():
         client = get_client()
@@ -45,6 +46,7 @@ def creates_images(*imgnames):
                 client.images.remove(name, force=True)
             except docker.errors.ImageNotFound:
                 pass
+
     return fixture
 
 
@@ -61,9 +63,11 @@ def non_experimental_daemon():
 def _skip_if_daemon_experimental_mode_is(skip_if_on):
     client = get_client()
     version = client.version()
-    if version.get('Experimental', False) == skip_if_on:
-        pytest.skip("This test requires a docker daemon with experimental mode *%s*" %
-                    ("disabled" if skip_if_on else "enabled"))
+    if version.get("Experimental", False) == skip_if_on:
+        pytest.skip(
+            "This test requires a docker daemon with experimental mode *%s*"
+            % ("disabled" if skip_if_on else "enabled")
+        )
 
 
 def assert_file_content(imgname, path, expected_content):
@@ -73,7 +77,7 @@ def assert_file_content(imgname, path, expected_content):
     try:
         actual_content = get_file_content(imgname, path)
     except docker.errors.NotFound:
-        assert False, ('File %s not found' % path)
+        assert False, "File %s not found" % path
     assert actual_content.strip() == expected_content.strip()
 
 
@@ -96,11 +100,11 @@ def get_file_content(imgname, path):
     container = client.containers.create(image)
 
     tarstream, stat = container.get_archive(path)
-    content = b''.join(tarstream)
+    content = b"".join(tarstream)
     container.remove()
 
     tf = tarfile.open(fileobj=io.BytesIO(content))
-    val = tf.extractfile(os.path.basename(path)).read().decode('utf-8')
+    val = tf.extractfile(os.path.basename(path)).read().decode("utf-8")
     return val
 
 
@@ -124,6 +128,7 @@ def find_files_in_layers(img, files, tmpdir=None):
     """
     import tempfile
     import json
+
     client = get_client()
     result = {f: [] for f in files}
 
@@ -131,22 +136,22 @@ def find_files_in_layers(img, files, tmpdir=None):
         tmpdir = tempfile.mkdtemp()
 
     img = client.images.get(img)
-    tarpath = os.path.join(tmpdir, 'image.tar')
-    with open(tarpath, 'wb') as tf:
+    tarpath = os.path.join(tmpdir, "image.tar")
+    with open(tarpath, "wb") as tf:
         for chunk in img.save():
             tf.write(chunk)
 
-    with tarfile.open(tarpath, 'r') as tf:
-        mf_obj = tf.extractfile('manifest.json')
-        manifest = json.loads(mf_obj.read().decode('utf-8'))
+    with tarfile.open(tarpath, "r") as tf:
+        mf_obj = tf.extractfile("manifest.json")
+        manifest = json.loads(mf_obj.read().decode("utf-8"))
         assert len(manifest) == 1
-        for path_to_layer_tar in manifest[0]['Layers']:
+        for path_to_layer_tar in manifest[0]["Layers"]:
             layer_tar_buffer = tf.extractfile(path_to_layer_tar)
 
-            with tarfile.open('r', fileobj=layer_tar_buffer) as layertar:
+            with tarfile.open("r", fileobj=layer_tar_buffer) as layertar:
                 layer_results = _scan_tar(layertar, files)
                 for f in layer_results:
-                    result[f].append(path_to_layer_tar[:-len('layer.tar')])
+                    result[f].append(path_to_layer_tar[: -len("layer.tar")])
 
     return result
 
@@ -164,7 +169,7 @@ def _scan_tar(tarobj, files):
     result = []
     for f in files:
         try:
-            tf = tarobj.extractfile(f.lstrip('/'))
+            tf = tarobj.extractfile(f.lstrip("/"))
         except (KeyError, file_not_found_error):
             continue
 
