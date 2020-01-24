@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 # Copyright 2017 Autodesk Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +14,6 @@ from __future__ import print_function
 import io
 import pprint
 from termcolor import cprint
-from future.utils import PY2
 
 
 class UserException(Exception):
@@ -92,7 +89,7 @@ class BuildError(Exception):
         with open("dockerfile.fail", "w") as dff:
             print(dockerfile, file=dff)
 
-        buffer_class = io.BytesIO if PY2 else io.StringIO
+        buffer_class = io.StringIO
         with buffer_class() as stream:
             cprint("Docker build failure", "red", attrs=["bold"], file=stream)
             print("\n   -------- Docker daemon output --------", file=stream)

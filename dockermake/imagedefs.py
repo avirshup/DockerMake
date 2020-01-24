@@ -20,7 +20,6 @@ import os
 from collections import OrderedDict
 import yaml
 import uuid
-from future.utils import iteritems
 
 import dockermake.step
 from . import builds
@@ -94,7 +93,7 @@ class ImageDefs(object):
             relpath = "./%s" % relpath
         pathroot = os.path.abspath(os.path.dirname(ymlfilepath))
 
-        for imagename, defn in iteritems(yamldefs):
+        for imagename, defn in yamldefs.items():
             if imagename == "_SOURCES_":
                 yamldefs["_SOURCES_"] = [
                     os.path.relpath(_get_abspath(pathroot, p))
@@ -224,11 +223,11 @@ class ImageDefs(object):
             base_image = buildname
             build_first = None
 
-            for sourceimage, files in iteritems(
-                self.ymldefs[base_name].get("copy_from", {})
+            for sourceimage, files in (
+                self.ymldefs[base_name].get("copy_from", {}).items()
             ):
                 sourceimages.add(sourceimage)
-                for sourcepath, destpath in iteritems(files):
+                for sourcepath, destpath in files.items():
                     istep += 1
                     buildname = "dmkbuild_%s_%d" % (image, istep)
                     build_steps.append(
