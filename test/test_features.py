@@ -122,7 +122,7 @@ def test_explicit_cache_from(twin_simple_targets, docker_client, clean8):
     image2.tag("img2repo/simple-target", tag="img2tag")
 
     run_docker_make(
-        "-f data/simple.yml simple-target" " --cache-repo img1repo --cache-tag img1tag"
+        "-f data/simple.yml simple-target --cache-repo img1repo --cache-tag img1tag"
     )
     final_image = docker_client.images.get("simple-target")
     assert final_image.id == image1.id
@@ -221,14 +221,14 @@ def test_error_if_copy_with_secrets(copy_with_secrets):
 
 
 twostep = helpers.creates_images(
-    "target-twostep", "dmkbuild_target-twostep_2", "dmkbuild_target-twostep_1"
+    "target-twostep", "1.target-twostep.dmk", "2.target-twostep.dmk"
 )
 
 
 def test_keep_build_tags(twostep, docker_client):
     run_docker_make("-f data/twostep.yml target-twostep --keep-build-tags")
-    docker_client.images.get("dmkbuild_target-twostep_1")
-    docker_client.images.get("dmkbuild_target-twostep_2")
+    assert docker_client.images.list("1.target-twostep.dmk")
+    assert docker_client.images.list("2.target-twostep.dmk")
 
 
 alltest = helpers.creates_images("t1", "t2", "t3", "t4")

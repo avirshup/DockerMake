@@ -33,21 +33,26 @@ def creates_images(*imgnames):
     @pytest.fixture
     def fixture():
         client = get_client()
-        for name in imgnames:
-            try:
-                client.images.remove(name, force=True)
-            except docker.errors.ImageNotFound:
-                pass
-
+        _clean_ctrs_and_imgs(imgnames, client)
         yield
-
-        for name in imgnames:  # force it to also remove the containers
-            try:
-                client.images.remove(name, force=True)
-            except docker.errors.ImageNotFound:
-                pass
+        _clean_ctrs_and_imgs(imgnames, client)
 
     return fixture
+
+
+def _clean_ctrs_and_imgs(imgnames, client):
+    to_clean = []
+    for img in imgnames:
+        if ":" in img:
+            to_clean.append(img)
+        else:
+            for img_obj in client.images.list(img):
+                to_clean.extend(img_obj.tags)
+    for name in to_clean:
+        try:
+            client.images.remove(name, force=True)
+        except docker.errors.ImageNotFound:
+            pass
 
 
 @pytest.fixture
