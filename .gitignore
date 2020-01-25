@@ -6,7 +6,7 @@ dockerfile.fail
 MANIFEST
 codeship.aes
 deployment/tokens
-deployment/config.json
+deployment/dockercfg.json
 .pytest_cache
 
 # IntelliJ project files
