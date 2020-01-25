@@ -1,5 +1,5 @@
 # Docker-make
-[ ![Codeship Status for avirshup/DockerMake](https://app.codeship.com/projects/2e8e5e50-f965-0135-5b52-6ab6449f402e/status?branch=master)](https://app.codeship.com/projects/278529)
+[![Codeship Status for avirshup/DockerMake](https://app.codeship.com/projects/d4a701b0-2114-0138-0bfb-1a499be1ccac/status?branch=master)](https://app.codeship.com/projects/382713)
 [ ![PyPI version](https://badge.fury.io/py/DockerMake.svg)](https://badge.fury.io/py/DockerMake)
 
 ## Table of Contents
