@@ -68,7 +68,7 @@ class ImageDefs(object):
             )
         self._sources.add(fname)
         with open(fname, "r") as yaml_file:
-            yamldefs = yaml.load(yaml_file)
+            yamldefs = yaml.safe_load(yaml_file)
         self._check_yaml_and_paths(filename, yamldefs)
 
         # Recursively read all steps in included files from the _SOURCES_ field and
