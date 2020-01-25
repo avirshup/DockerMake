@@ -179,6 +179,7 @@ class ImageDefs(object):
             buildargs (dict): build-time dockerfile arugments
             **kwargs (dict): extra keyword arguments for the BuildTarget object
         """
+        build_uuid = str(uuid.uuid4())
         from_image = self.get_external_base_image(image)
         if cache_repo or cache_tag:
             cache_from = utils.generate_name(image, cache_repo, cache_tag)
@@ -202,7 +203,7 @@ class ImageDefs(object):
 
         for base_name in self.sort_dependencies(image):
             istep += 1
-            buildname = "dmkbuild_%s_%d" % (image, istep)
+            buildname = self._generate_stepname(istep, image, build_uuid)
             secret_files = self.ymldefs[base_name].get("secret_files", None)
             squash = self.ymldefs[base_name].get("squash", bool(secret_files))
             build_steps.append(
@@ -229,7 +230,7 @@ class ImageDefs(object):
                 sourceimages.add(sourceimage)
                 for sourcepath, destpath in files.items():
                     istep += 1
-                    buildname = "dmkbuild_%s_%d" % (image, istep)
+                    buildname = self._generate_stepname(istep, image, build_uuid)
                     build_steps.append(
                         dockermake.step.FileCopyStep(
                             sourceimage,
@@ -261,6 +262,9 @@ class ImageDefs(object):
             from_image=from_image,
             **kwargs,
         )
+
+    def _generate_stepname(self, istep, image, build_uuid):
+        return f"{istep}.{image}.dmk:{build_uuid}"
 
     def sort_dependencies(self, image, dependencies=None):
         """
