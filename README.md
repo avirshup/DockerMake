@@ -1,3 +1,6 @@
+# ARCHIVED
+This project is unmaintained, and is no longer compatible with recent versions of the Docker API. Also, there are now better alternatives out there that use buildkit for much faster builds!
+
 # Docker-make
 [![Codeship Status for avirshup/DockerMake](https://app.codeship.com/projects/d4a701b0-2114-0138-0bfb-1a499be1ccac/status?branch=master)](https://app.codeship.com/projects/382713)
 [ ![PyPI version](https://badge.fury.io/py/DockerMake.svg)](https://badge.fury.io/py/DockerMake)
